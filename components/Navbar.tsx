@@ -41,7 +41,6 @@ export default function Navbar() {
         { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
         { name: "Knowledge Hub", href: "/financial-dictionary", icon: BookOpen },
         { name: "Settings", href: "/settings", icon: SettingsIcon },
-        ...(user.role === "admin" ? [{ name: "Admin", href: "/admin", icon: ShieldAlert }] : []),
       ]
     : [
         { name: "Features", href: "/#features", icon: undefined },
