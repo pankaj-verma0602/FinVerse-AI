@@ -15,7 +15,8 @@ import { db } from "@/firebase/config";
 
 interface DictionaryTerm {
   id: string;
-  term: string;
+  title?: string;
+  term?: string;
   meaning: string;
   simpleExplanation: string;
   example: string;
@@ -42,7 +43,11 @@ export default function DictionaryPage() {
         } as DictionaryTerm);
       });
       // Sort alphabetically
-      docsList.sort((a, b) => a.term.localeCompare(b.term));
+      docsList.sort((a, b) => {
+        const nameA = a.title || a.term || "";
+        const nameB = b.title || b.term || "";
+        return nameA.localeCompare(nameB);
+      });
       setTerms(docsList);
       setLoading(false);
     }, (err) => {
@@ -54,8 +59,10 @@ export default function DictionaryPage() {
   }, []);
 
   const filteredTerms = terms.filter((t) => {
-    const matchesSearch = t.term.toLowerCase().includes(search.toLowerCase()) || 
-                          t.meaning.toLowerCase().includes(search.toLowerCase());
+    const termText = (t.title || t.term || "").toLowerCase();
+    const meaningText = (t.meaning || "").toLowerCase();
+    const searchText = search.toLowerCase();
+    const matchesSearch = termText.includes(searchText) || meaningText.includes(searchText);
     const matchesCategory = activeCategory === "All" || t.category === activeCategory;
     return matchesSearch && matchesCategory;
   });
@@ -120,7 +127,7 @@ export default function DictionaryPage() {
             {filteredTerms.map((t) => (
               <Card key={t.id} className="glass-card border border-border/50 p-6 rounded-2xl space-y-4 hover:border-primary/20 transition-all duration-300">
                 <div className="flex justify-between items-start">
-                  <h3 className="font-extrabold text-lg text-primary">{t.term}</h3>
+                  <h3 className="font-extrabold text-lg text-primary">{t.title || t.term}</h3>
                   <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-muted border border-border/40 text-muted-foreground">
                     {t.category}
                   </span>

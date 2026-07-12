@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { 
   collection, 
-  addDoc, 
   setDoc, 
   deleteDoc, 
   doc, 
@@ -52,26 +51,86 @@ export default function AdminDictionaryPage() {
   const [alertMsg, setAlertMsg] = useState<string | null>(null);
 
   useEffect(() => {
+    let active = true;
+
     // Listen to real-time dictionary terms feed
     const unsub = onSnapshot(collection(db, "financial_terms"), (snap) => {
+      if (!active) return;
       const docsList: DictionaryTerm[] = [];
       snap.forEach((docSnap) => {
+        const data = docSnap.data();
         docsList.push({
           id: docSnap.id,
-          ...docSnap.data()
+          term: data.term || docSnap.id,
+          meaning: data.meaning || data.definition || "",
+          simpleExplanation: data.simpleExplanation || "",
+          example: data.example || "",
+          hindiTranslation: data.hindiTranslation || data.hindiExplanation || "",
+          category: data.category || "General",
+          createdAt: data.createdAt || new Date().toISOString()
         } as DictionaryTerm);
       });
-      // Sort alphabetically by term
       docsList.sort((a, b) => a.term.localeCompare(b.term));
       setTerms(docsList);
+      localStorage.setItem("finverse_local_financial_terms", JSON.stringify(docsList));
       setLoading(false);
     }, (err) => {
-      console.error(err);
-      setLoading(false);
+      console.warn("Firestore dictionary load failed, using local storage:", err);
+      if (active) loadLocalFallback();
     });
 
-    return () => unsub();
-  }, []);
+    const timeoutId = setTimeout(() => {
+      if (active && terms.length === 0) {
+        console.warn("Firestore dictionary load timed out, using local storage.");
+        loadLocalFallback();
+      }
+    }, 1200);
+
+    function loadLocalFallback() {
+      const stored = localStorage.getItem("finverse_local_financial_terms");
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          setTerms(parsed);
+        } catch (e) {
+          console.error(e);
+        }
+      } else {
+        // Fallback seeded terms
+        const fallbackList: DictionaryTerm[] = [
+          {
+            id: "APR",
+            term: "APR",
+            meaning: "Annual Percentage Rate shows the yearly cost of borrowing money.",
+            simpleExplanation: "The total yearly cost of a loan expressed as a percentage.",
+            example: "A credit card with 36% APR can become expensive if unpaid.",
+            hindiTranslation: "वार्षिक प्रतिशत दर (APR) ऋण लेने की वार्षिक कुल लागत को दर्शाती है।",
+            category: "Banking",
+            createdAt: new Date().toISOString()
+          },
+          {
+            id: "Compound_Interest",
+            term: "Compound Interest",
+            meaning: "Interest calculated on the initial principal and also on the accumulated interest of previous periods.",
+            simpleExplanation: "Earning interest on your interest, creating a snowball wealth effect.",
+            example: "₹10,000 earns ₹1,000 in Year 1. Year 2 earns interest on ₹11,000, yielding ₹1,210.",
+            hindiTranslation: "चक्रवृद्धि ब्याज (Compound Interest) में मूलधन के साथ-साथ पहले मिले ब्याज पर भी ब्याज मिलता है।",
+            category: "Investment",
+            createdAt: new Date().toISOString()
+          }
+        ];
+        setTerms(fallbackList);
+        localStorage.setItem("finverse_local_financial_terms", JSON.stringify(fallbackList));
+      }
+      setLoading(false);
+    }
+
+    return () => {
+      active = false;
+      unsub();
+      clearTimeout(timeoutId);
+    };
+  }, [terms.length]);
 
   const triggerAlert = (text: string) => {
     setAlertMsg(text);
@@ -106,40 +165,71 @@ export default function AdminDictionaryPage() {
 
     const termData = {
       term,
+      title: term,
+      meaning,
+      definition: meaning,
+      simpleExplanation,
+      example,
+      hindiTranslation,
+      hindiExplanation: hindiTranslation,
+      category,
+      updatedAt: new Date().toISOString()
+    };
+
+    // Optimistically update local state & local storage
+    const updatedTerms = [...terms];
+    const newId = activeTermId || term.replace(/\s+/g, "_");
+    const newDoc: DictionaryTerm = {
+      id: newId,
+      term,
       meaning,
       simpleExplanation,
       example,
       hindiTranslation,
       category,
-      updatedAt: new Date().toISOString()
+      createdAt: activeTermId ? (terms.find(t => t.id === activeTermId)?.createdAt || new Date().toISOString()) : new Date().toISOString()
     };
 
-    try {
-      if (activeTermId) {
-        await setDoc(doc(db, "financial_terms", activeTermId), termData, { merge: true });
-        triggerAlert("Dictionary term updated successfully!");
-      } else {
-        const newDoc = await addDoc(collection(db, "financial_terms"), {
-          ...termData,
-          createdAt: new Date().toISOString()
-        });
-        setActiveTermId(newDoc.id);
-      }
-      setIsEditing(false);
-    } catch (err) {
-      console.error(err);
-      triggerAlert("Error saving dictionary term.");
+    const existingIdx = updatedTerms.findIndex(t => t.id === newId);
+    if (existingIdx >= 0) {
+      updatedTerms[existingIdx] = newDoc;
+    } else {
+      updatedTerms.push(newDoc);
     }
+    updatedTerms.sort((a, b) => a.term.localeCompare(b.term));
+    setTerms(updatedTerms);
+    localStorage.setItem("finverse_local_financial_terms", JSON.stringify(updatedTerms));
+
+    try {
+      await setDoc(doc(db, "financial_terms", newId), {
+        ...termData,
+        createdAt: new Date().toISOString()
+      }, { merge: true });
+      triggerAlert("Dictionary term saved to cloud and local storage successfully!");
+    } catch (err) {
+      console.warn("Firestore save failed, using local storage cache:", err);
+      triggerAlert("Dictionary term saved locally (Offline Mode).");
+    }
+
+    setIsEditing(false);
   };
 
   const handleDelete = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this term? This cannot be undone.")) return;
+
+    // Optimistically update local
+    const filtered = terms.filter(t => t.id !== id);
+    setTerms(filtered);
+    localStorage.setItem("finverse_local_financial_terms", JSON.stringify(filtered));
+
     try {
       await deleteDoc(doc(db, "financial_terms", id));
       triggerAlert("Dictionary term deleted successfully!");
       handleAddNew();
     } catch (err) {
-      console.error(err);
+      console.warn("Firestore delete failed, removed locally:", err);
+      triggerAlert("Term removed locally.");
+      handleAddNew();
     }
   };
 

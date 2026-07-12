@@ -143,16 +143,21 @@ export default function MentorPage() {
     }
   }, [user, language]);
 
-  if (loading || !user) {
-    return (
-      <div className="flex min-h-[80vh] items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto"></div>
-          <p className="mt-4 text-muted-foreground text-sm">Loading money mentor...</p>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (user && typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const initialTerm = params.get("term");
+      if (initialTerm) {
+        const promptText = `Explain ${initialTerm} like I am 15 in ${language === "hi" ? "Hindi" : "English"}. Avoid complicated words, explain step-by-step with daily life examples.`;
+        const t = setTimeout(() => {
+          handleSendMessage(promptText);
+        }, 800);
+        return () => clearTimeout(t);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, language]);
+
 
   // Voice playback using Web Speech API
   const speakText = (text: string) => {
@@ -232,30 +237,30 @@ export default function MentorPage() {
     
     if (language === "hi") {
       if (q.includes("चक्रवृद्धि") || q.includes("interest") || q.includes("ब्याज")) {
-        return "चक्रवृद्धि ब्याज (Compound Interest) तब होता है जब आप अपने मूल धन पर तो ब्याज कमाते ही हैं, साथ ही पहले कमाए गए ब्याज पर भी ब्याज कमाते हैं।\n\n• उदाहरण: यदि आप 10% की दर से $100 जमा करते हैं, तो वर्ष 1 में आपके पास $110 होंगे। वर्ष 2 में, आप पूरे $110 पर 10% ब्याज ($11) कमाएंगे, जिससे आपका पैसा $121 हो जाएगा।\n• समय के साथ यह ब्याज का ब्याज आपके पैसे को तेजी से बढ़ाता है।";
+        return "चक्रवृद्धि ब्याज (Compound Interest) तब होता है जब आप अपने मूल धन पर तो ब्याज कमाते ही हैं, साथ ही पहले कमाए गए ब्याज पर भी ब्याज कमाते हैं।\n\n• उदाहरण: यदि आप 10% की दर से ₹10,000 जमा करते हैं, तो वर्ष 1 में आपके पास ₹11,000 होंगे। वर्ष 2 में, आप पूरे ₹11,000 पर 10% ब्याज (₹1,100) कमाएंगे, जिससे आपका पैसा ₹12,100 हो जाएगा।\n• समय के साथ यह ब्याज का ब्याज आपके पैसे को तेजी से बढ़ाता है।";
       }
       if (q.includes("महंगाई") || q.includes("inflation") || q.includes("मुद्रास्फीति")) {
-        return "मुद्रास्फीति (Inflation) का अर्थ है समय के साथ वस्तुओं और सेवाओं की कीमतों में होने वाली वृद्धि। इससे आपके पैसे की क्रय शक्ति (खरीदने की क्षमता) घटती है।\n\n• उदाहरण: यदि आज एक पैकेट दूध $100 का है और महंगाई 6% है, तो अगले साल वह $106 का मिलेगा।\n• यदि आपका पैसा केवल अलमारी या बैंक बचत खाते में रखा है, तो उसकी वास्तविक कीमत घट रही है। महंगाई को मात देने के लिए सही जगह निवेश करना जरूरी है।";
+        return "मुद्रास्फीति (Inflation) का अर्थ है समय के साथ वस्तुओं और सेवाओं की कीमतों में होने वाली वृद्धि। इससे आपके पैसे की क्रय शक्ति (खरीदने की क्षमता) घटती है।\n\n• उदाहरण: यदि आज एक पैकेट दूध ₹100 का है और महंगाई 6% है, तो अगले साल वह ₹106 का मिलेगा।\n• यदि आपका पैसा केवल अलमारी या बैंक बचत खाते में रखा है, तो उसकी वास्तविक कीमत घट रही है। महंगाई को मात देने के लिए सही जगह निवेश करना जरूरी है।";
       }
       if (q.includes("बजट") || q.includes("50/30/20")) {
         return "50/30/20 नियम बजट बनाने का सबसे आसान तरीका है:\n\n• 50% आवश्यकताएं (Needs): घर का किराया, बिजली बिल, राशन जैसी जरूरी चीजें।\n• 30% इच्छाएं (Wants): बाहर खाना, फिल्में देखना या शौक पूरे करना।\n• 20% बचत (Savings): आपातकालीन फंड बनाना, निवेश करना या कर्ज चुकाना।\n• यह नियम आपकी कमाई को सही संतुलन में रखने में मदद करता है।";
       }
       if (q.includes("म्युचुअल") || q.includes("mutual") || q.includes("sip")) {
-        return "म्यूचुअल फंड कई निवेशकों के पैसे को एक साथ मिलाकर शेयरों या बांडों में निवेश करने का माध्यम है, जिसे एक प्रोफेशनल फंड मैनेजर संभालता है।\n\n• SIP (Systematic Investment Plan) इसका एक तरीका है जिसमें आप हर महीने एक निश्चित राशि (जैसे $500) निवेश करते हैं।\n• SIP बाजार के उतार-चढ़ाव को औसत (average) करता है और शुरुआती निवेशकों के लिए सबसे सुरक्षित माना जाता है।";
+        return "म्यूचुअल फंड कई निवेशकों के पैसे को एक साथ मिलाकर शेयरों या बांडों में निवेश करने का माध्यम है, जिसे एक प्रोफेशनल फंड मैनेजर संभालता है।\n\n• SIP (Systematic Investment Plan) इसका एक तरीका है जिसमें आप हर महीने एक निश्चित राशि (जैसे ₹5,000) निवेश करते हैं।\n• SIP बाजार के उतार-चढ़ाव को औसत (average) करता है और शुरुआती निवेशकों के लिए सबसे सुरक्षित माना जाता है।";
       }
       return "यह एक बढ़िया सवाल है! पैसों का सही प्रबंधन ही वित्तीय स्वतंत्रता की कुंजी है। हमें बजट बनाना, आपातकालीन फंड (Emergency Fund) तैयार करना, और नियमित रूप से निवेश करना सीखना चाहिए। क्या आप इनमें से किसी विषय को और गहराई से समझना चाहेंगे?";
     } else {
       if (q.includes("interest") || q.includes("compound")) {
-        return "Compound interest is when you earn interest on both the money you originally saved and the accumulated interest from previous periods.\n\n• Example: If you save $100 at a 10% APY, you will have $110 after year 1. In year 2, you earn 10% on $110 ($11), making your balance $121.\n• Over time, this compounding effect snowballs your small savings into significant wealth.";
+        return "Compound interest is when you earn interest on both the money you originally saved and the accumulated interest from previous periods.\n\n• Example: If you save ₹10,000 at a 10% APY, you will have ₹11,000 after year 1. In year 2, you earn 10% on ₹11,000 (₹1,100), making your balance ₹12,100.\n• Over time, this compounding effect snowballs your small savings into significant wealth.";
       }
       if (q.includes("inflation")) {
-        return "Inflation is the gradual increase in prices over time, which reduces the purchasing power of your cash.\n\n• Example: If inflation is 5%, a grocery basket costing $100 today will cost $105 next year.\n• If you leave your cash under the mattress, it silently loses value. To beat inflation, you must invest in assets that grow faster than the inflation rate.";
+        return "Inflation is the gradual increase in prices over time, which reduces the purchasing power of your cash.\n\n• Example: If inflation is 5%, a grocery basket costing ₹10,000 today will cost ₹10,500 next year.\n• If you leave your cash under the mattress, it silently loses value. To beat inflation, you must invest in assets that grow faster than the inflation rate.";
       }
       if (q.includes("tax") || q.includes("bracket")) {
-        return "Marginal tax brackets mean you only pay higher tax rates on the income earned within that specific range.\n\n• Example: If the first bracket is 10% up to $10,000 and the second is 15%, and you earn $12,000, you pay 10% on the first $10,000 and 15% only on the extra $2,000.\n• Moving to a higher bracket NEVER reduces your net take-home income overall.";
+        return "Marginal tax brackets mean you only pay higher tax rates on the income earned within that specific range.\n\n• Example: If the first bracket is 10% up to ₹10,00,000 and the second is 15%, and you earn ₹12,00,000, you pay 10% on the first ₹10,00,000 and 15% only on the extra ₹2,00,000.\n• Moving to a higher bracket NEVER reduces your net take-home income overall.";
       }
       if (q.includes("sip") || q.includes("lump sum") || q.includes("mutual")) {
-        return "A Systematic Investment Plan (SIP) lets you invest a fixed amount regularly (e.g. monthly) into mutual funds, whereas a Lump Sum is investing a large block of cash all at once.\n\n• SIP averages out market fluctuations (dollar-cost averaging) and is ideal for beginners to build discipline.\n• Lump sum is suitable when you have a cash windfall and the market is valued attractively.";
+        return "A Systematic Investment Plan (SIP) lets you invest a fixed amount regularly (e.g. monthly) into mutual funds, whereas a Lump Sum is investing a large block of cash all at once.\n\n• SIP averages out market fluctuations (rupee-cost averaging) and is ideal for beginners to build discipline.\n• Lump sum is suitable when you have a cash windfall and the market is valued attractively.";
       }
       if (q.includes("50/30/20") || q.includes("budget")) {
         return "The 50/30/20 budgeting rule is a simple framework for tracking cash flow:\n\n• 50% to Needs (Rent, Utilities, Groceries)\n• 30% to Wants (Dining out, Subscription plans, Hobbies)\n• 20% to Savings, investments, or clearing debts\n• It provides a clear target to keep your lifestyle in line with your income.";
@@ -265,7 +270,7 @@ export default function MentorPage() {
   };
 
   // Send message
-  const handleSendMessage = async (queryText?: string) => {
+  async function handleSendMessage(queryText?: string) {
     const textToSend = queryText || inputText;
     if (!textToSend.trim() || loadingAi) return;
 
@@ -335,7 +340,7 @@ Mentor:`;
     } finally {
       setLoadingAi(false);
     }
-  };
+  }
 
   // Handle Preset Click
   const handlePresetClick = (query: string) => {
@@ -356,6 +361,17 @@ Mentor:`;
       }
     ]);
   };
+
+  if (loading || !user) {
+    return (
+      <div className="flex min-h-[80vh] items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto"></div>
+          <p className="mt-4 text-muted-foreground text-sm">Loading money mentor...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen bg-background p-6 md:p-12">

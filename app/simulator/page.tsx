@@ -44,23 +44,23 @@ interface HistoryPoint {
 const PRESETS = [
   {
     name: "Debt-ridden Graduate",
-    description: "Young graduate with student loans and entry-level salary. Needs to balance debt payoff with building an emergency fund.",
+    description: "Young graduate with education loans and entry-level salary. Needs to balance debt payoff with building an emergency fund.",
     age: 22,
-    salary: 3200,
-    expenses: 2600,
-    savings: 1000,
+    salary: 32000,
+    expenses: 26000,
+    savings: 10000,
     investments: 0,
-    debt: 12000,
+    debt: 120000,
     assets: 0,
   },
   {
     name: "Steady Corporate Earner",
-    description: "Mid-career professional with stable income and some savings. Ready to start investing in equities or home ownership.",
+    description: "Mid-career professional with stable income and some savings. Ready to start investing in mutual funds or home ownership.",
     age: 28,
-    salary: 6200,
-    expenses: 4200,
-    savings: 15000,
-    investments: 5000,
+    salary: 62000,
+    expenses: 42000,
+    savings: 150000,
+    investments: 50000,
     debt: 0,
     assets: 0,
   },
@@ -68,11 +68,11 @@ const PRESETS = [
     name: "Freelance Gig Contractor",
     description: "Variable monthly income, high expenses, and minimal safety net. Must focus on liquidity and building a robust cash cushion.",
     age: 25,
-    salary: 4200,
-    expenses: 3400,
-    savings: 3000,
-    investments: 1000,
-    debt: 2500,
+    salary: 42000,
+    expenses: 34000,
+    savings: 30000,
+    investments: 10000,
+    debt: 25000,
     assets: 0,
   }
 ];
@@ -82,8 +82,8 @@ const RANDOM_EVENTS = [
     name: "Medical Emergency",
     description: "An unexpected dental surgery requires immediate attention.",
     impactType: "expense",
-    impactValue: 3000,
-    message: "Ouch! A medical emergency costs you $3,000 out of pocket."
+    impactValue: 30000,
+    message: "Ouch! A medical emergency costs you ₹30,000 out of pocket."
   },
   {
     name: "Market Correction",
@@ -96,8 +96,8 @@ const RANDOM_EVENTS = [
     name: "Company Bonus",
     description: "Your team outperforms, yielding a one-time cash award.",
     impactType: "windfall",
-    impactValue: 4000,
-    message: "Windfall! You receive a performance bonus of $4,000 cash."
+    impactValue: 40000,
+    message: "Windfall! You receive a performance bonus of ₹40,000 cash."
   },
   {
     name: "Stock Market Rally",
@@ -110,8 +110,8 @@ const RANDOM_EVENTS = [
     name: "Rent Spike",
     description: "Landlord increases your lease rate due to local demand.",
     impactType: "expense_increase",
-    impactValue: 200,
-    message: "Rent Hike: Your monthly expenses increase by $200."
+    impactValue: 2000,
+    message: "Rent Hike: Your monthly expenses increase by ₹2,000."
   }
 ];
 
@@ -262,7 +262,7 @@ export default function SimulatorPage() {
     };
     
     setTimeline([initialPoint]);
-    setLogs([`Initialized simulation: "${preset.name}". Net Worth: $${initialNet.toLocaleString()}`]);
+    setLogs([`Initialized simulation: "${preset.name}". Net Worth: ₹${initialNet.toLocaleString()}`]);
     setAiFeedback("Select an action below to start modeling your financial lifecycle. Advancing years compounds your growth and interest rates.");
     setIsPlaying(true);
   };
@@ -284,13 +284,13 @@ export default function SimulatorPage() {
       const prompt = `You are a financial advisor AI. The user is playing a life simulator and just did this action: "${actionDesc}".
 Here is their current state:
 - Age: ${updatedState.age}
-- Monthly Salary: $${updatedState.salary}
-- Monthly Expenses: $${updatedState.expenses}
-- Cash Savings: $${updatedState.savings}
-- Stocks/Index Funds: $${updatedState.investments}
-- Assets (e.g. house value): $${updatedState.assets}
-- Debt: $${updatedState.debt}
-- Net Worth: $${updatedState.savings + updatedState.investments + updatedState.assets - updatedState.debt}
+- Monthly Salary: ₹${updatedState.salary}
+- Monthly Expenses: ₹${updatedState.expenses}
+- Cash Savings: ₹${updatedState.savings}
+- Stocks/Mutual Funds: ₹${updatedState.investments}
+- Assets (e.g. house value): ₹${updatedState.assets}
+- Debt: ₹${updatedState.debt}
+- Net Worth: ₹${updatedState.savings + updatedState.investments + updatedState.assets - updatedState.debt}
 
 Write a short, 2-3 sentence analysis of this choice. Explain its long-term benefits or potential risks. Keep the tone conversational, concise, and educational.`;
 
@@ -337,16 +337,16 @@ Write a short, 2-3 sentence analysis of this choice. Explain its long-term benef
       if (state.salary - state.expenses <= 0) {
         return "Warning: Your annual expenses exceed or match your salary. You are not saving any money. Consider cutting monthly costs or finding ways to boost your salary.";
       }
-      return `Annual cycle complete. Your net worth is now $${computedNet.toLocaleString()}. Compounding index funds and regular savings are contributing to your long-term wealth. Keep it up!`;
+      return `Annual cycle complete. Your net worth is now ₹${computedNet.toLocaleString()}. Compounding index funds and regular savings are contributing to your long-term wealth. Keep it up!`;
     }
     if (action.includes("Buy House")) {
-      return `Congratulations on buying a home! While mortgage debt of $200,000 has been added, you now own a $220,000 asset. Note that your monthly expenses increased by $1,200, which reduces your savings rate. Make sure to rebuild your cash buffer.`;
+      return `Congratulations on buying a home! While mortgage debt of ₹20,00,000 has been added, you now own a ₹22,00,000 asset. Note that your monthly expenses increased by ₹12,000, which reduces your savings rate. Make sure to rebuild your cash buffer.`;
     }
     if (action.includes("Stocks")) {
       return `You allocated cash to equity index funds. This is a smart choice to build compound returns over inflation, but keep in mind stocks can be volatile. Ensure you still maintain at least 3-6 months of expenses in cash.`;
     }
     if (action.includes("Promotion")) {
-      return `Great career move! Investing $5,000 in your skills secured a 20% salary increase. This raises your monthly savings capacity from here on out, making other goals like investing or housing much safer.`;
+      return `Great career move! Investing ₹50,000 in your skills secured a 20% salary increase. This raises your monthly savings capacity from here on out, making other goals like investing or housing much safer.`;
     }
     if (action.includes("Pay Debt")) {
       return `Paying off high-interest debt is a guaranteed return on investment. By reducing your debt balance, you lower interest accrual and improve your debt-to-income ratio, making your net worth much healthier.`;
@@ -405,11 +405,11 @@ Write a short, 2-3 sentence analysis of this choice. Explain its long-term benef
 
     // Log
     const marginStr = monthlyMargin >= 0 
-      ? `added $${(monthlyMargin * 12).toLocaleString()} to savings`
-      : `drew $${Math.abs(monthlyMargin * 12).toLocaleString()} from savings to cover expenses`;
+      ? `added ₹${(monthlyMargin * 12).toLocaleString()} to savings`
+      : `drew ₹${Math.abs(monthlyMargin * 12).toLocaleString()} from savings to cover expenses`;
     
     setLogs((prev) => [
-      `Year ${nextAge}: Age advanced. You ${marginStr}. Index funds grew to $${newInvestments.toLocaleString()}. Debt accrued 5% interest.`,
+      `Year ${nextAge}: Age advanced. You ${marginStr}. Index funds grew to ₹${newInvestments.toLocaleString()}. Debt accrued 5% interest.`,
       ...prev
     ]);
 
@@ -438,7 +438,7 @@ Write a short, 2-3 sentence analysis of this choice. Explain its long-term benef
     updateTimelinePoint(nextNet, newSavings, newInvestments, debt);
 
     setLogs((prev) => [
-      `Transferred $${investAmount.toLocaleString()} from liquid savings to stock index funds.`,
+      `Transferred ₹${investAmount.toLocaleString()} from liquid savings to stock index funds.`,
       ...prev
     ]);
 
@@ -468,7 +468,7 @@ Write a short, 2-3 sentence analysis of this choice. Explain its long-term benef
     updateTimelinePoint(nextNet, newSavings, investments, newDebt);
 
     setLogs((prev) => [
-      `Paid off $${payment.toLocaleString()} of outstanding debt using cash savings.`,
+      `Paid off ₹${payment.toLocaleString()} of outstanding debt using cash savings.`,
       ...prev
     ]);
 
@@ -485,13 +485,13 @@ Write a short, 2-3 sentence analysis of this choice. Explain its long-term benef
 
   // Game Action: Buy House
   const handleBuyHouse = () => {
-    const downPayment = 30000;
+    const downPayment = 300000;
     if (savings < downPayment || hasHouse) return;
 
     const newSavings = savings - downPayment;
-    const newDebt = debt + 200000; // Mortgage debt
-    const newAssets = assets + 220000; // House value
-    const newExpenses = expenses + 1200; // Added monthly mortgage bill
+    const newDebt = debt + 2000000; // Mortgage debt
+    const newAssets = assets + 2200000; // House value
+    const newExpenses = expenses + 12000; // Added monthly mortgage bill
 
     setSavings(newSavings);
     setDebt(newDebt);
@@ -503,7 +503,7 @@ Write a short, 2-3 sentence analysis of this choice. Explain its long-term benef
     updateTimelinePoint(nextNet, newSavings, investments, newDebt);
 
     setLogs((prev) => [
-      `Purchased residential property. Spent $30,000 down payment. Mortgaged $200,000. Expenses increased by $1,200/mo.`,
+      `Purchased residential property. Spent ₹3,00,000 down payment. Mortgaged ₹20,00,000. Expenses increased by ₹12,000/mo.`,
       ...prev
     ]);
 
@@ -520,7 +520,7 @@ Write a short, 2-3 sentence analysis of this choice. Explain its long-term benef
 
   // Game Action: Promotion / Upskilling
   const handleUpskill = () => {
-    const cost = 5000;
+    const cost = 50000;
     if (savings < cost) return;
 
     const newSavings = savings - cost;
@@ -533,7 +533,7 @@ Write a short, 2-3 sentence analysis of this choice. Explain its long-term benef
     updateTimelinePoint(nextNet, newSavings, investments, debt);
 
     setLogs((prev) => [
-      `Completed career training ($5,000 cost). Promoted! Monthly salary increased by 20% to $${newSalary.toLocaleString()}.`,
+      `Completed career training (₹50,000 cost). Promoted! Monthly salary increased by 20% to ₹${newSalary.toLocaleString()}.`,
       ...prev
     ]);
 
@@ -695,19 +695,19 @@ Write a short, 2-3 sentence analysis of this choice. Explain its long-term benef
                     </div>
                     <div className="flex justify-between border-b border-border/20 py-1.5">
                       <span className="text-muted-foreground">Monthly Salary</span>
-                      <span className="font-bold text-emerald-400">${preset.salary.toLocaleString()}</span>
+                      <span className="font-bold text-emerald-400">₹{preset.salary.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between border-b border-border/20 py-1.5">
                       <span className="text-muted-foreground">Monthly Expenses</span>
-                      <span className="font-bold">${preset.expenses.toLocaleString()}</span>
+                      <span className="font-bold">₹{preset.expenses.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between border-b border-border/20 py-1.5">
                       <span className="text-muted-foreground">Savings (Cash)</span>
-                      <span className="font-bold">${preset.savings.toLocaleString()}</span>
+                      <span className="font-bold">₹{preset.savings.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between py-1.5">
                       <span className="text-muted-foreground">Outstanding Debt</span>
-                      <span className={`font-bold ${preset.debt > 0 ? "text-red-400" : ""}`}>${preset.debt.toLocaleString()}</span>
+                      <span className={`font-bold ${preset.debt > 0 ? "text-red-400" : ""}`}>₹{preset.debt.toLocaleString()}</span>
                     </div>
                   </CardContent>
                   <CardFooter className="p-6 pt-0">
@@ -733,27 +733,27 @@ Write a short, 2-3 sentence analysis of this choice. Explain its long-term benef
                 <Card className="glass-card border border-border/40 p-4 relative overflow-hidden">
                   <div className="text-[10px] text-muted-foreground font-semibold uppercase">Net Worth</div>
                   <div className={`text-xl font-bold mt-1 ${netWorth >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                    ${netWorth.toLocaleString()}
+                    ₹{netWorth.toLocaleString()}
                   </div>
                   <div className="text-[9px] text-muted-foreground mt-2">Savings + Investments - Debt</div>
                 </Card>
 
                 <Card className="glass-card border border-border/40 p-4">
                   <div className="text-[10px] text-muted-foreground font-semibold uppercase">Cash Savings</div>
-                  <div className="text-xl font-bold text-foreground mt-1">${savings.toLocaleString()}</div>
+                  <div className="text-xl font-bold text-foreground mt-1">₹{savings.toLocaleString()}</div>
                   <div className="text-[9px] text-muted-foreground mt-2">Liquid Emergency Fund</div>
                 </Card>
 
                 <Card className="glass-card border border-border/40 p-4">
                   <div className="text-[10px] text-muted-foreground font-semibold uppercase">Stock Investments</div>
-                  <div className="text-xl font-bold text-blue-400 mt-1">${investments.toLocaleString()}</div>
+                  <div className="text-xl font-bold text-blue-400 mt-1">₹{investments.toLocaleString()}</div>
                   <div className="text-[9px] text-muted-foreground mt-2">Index Funds (Compound Assets)</div>
                 </Card>
 
                 <Card className="glass-card border border-border/40 p-4">
                   <div className="text-[10px] text-muted-foreground font-semibold uppercase">Outstanding Debt</div>
                   <div className={`text-xl font-bold mt-1 ${debt > 0 ? "text-red-400" : "text-foreground"}`}>
-                    ${debt.toLocaleString()}
+                    ₹{debt.toLocaleString()}
                   </div>
                   <div className="text-[9px] text-muted-foreground mt-2">5% Compound Interest Rate</div>
                 </Card>
@@ -803,7 +803,7 @@ Write a short, 2-3 sentence analysis of this choice. Explain its long-term benef
                           fontSize={10} 
                           tickLine={false} 
                           axisLine={false}
-                          tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} 
+                          tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} 
                         />
                         <Tooltip
                           contentStyle={{ backgroundColor: "rgba(20, 20, 20, 0.85)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "10px", fontSize: "11px" }}
@@ -833,7 +833,7 @@ Write a short, 2-3 sentence analysis of this choice. Explain its long-term benef
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="text-xs font-bold">Advance 1 Year</div>
-                        <p className="text-[10px] text-muted-foreground">Accrues yearly income, incurs expenses, compounds stock returns.</p>
+                        <p className="text-[10px] text-muted-foreground">Accrues yearly income, incurs expenses, compounds mutual fund returns.</p>
                       </div>
                       <Button 
                         onClick={handleAdvanceYear} 
@@ -846,7 +846,7 @@ Write a short, 2-3 sentence analysis of this choice. Explain its long-term benef
                     <div className="flex items-center justify-between border-t border-border/20 pt-4">
                       <div>
                         <div className="text-xs font-bold">Trigger Random Event</div>
-                        <p className="text-[10px] text-muted-foreground">Test emergency reserves with random bonuses or layoffs.</p>
+                        <p className="text-[10px] text-muted-foreground">Test emergency reserves with random bonuses or medical costs.</p>
                       </div>
                       <Button 
                         onClick={handleTriggerEvent} 
@@ -870,18 +870,18 @@ Write a short, 2-3 sentence analysis of this choice. Explain its long-term benef
                     {/* Invest in index funds */}
                     <div className="space-y-2">
                       <div className="flex justify-between text-xs font-medium">
-                        <span>Invest in Stocks</span>
-                        <span className="text-blue-400 font-bold">${investAmount.toLocaleString()}</span>
+                        <span>Invest in Mutual Funds</span>
+                        <span className="text-blue-400 font-bold">₹{investAmount.toLocaleString()}</span>
                       </div>
                       <div className="flex gap-2">
                         <input
                           type="range"
-                          min="500"
-                          max={Math.max(500, savings)}
-                          step="500"
+                          min="5000"
+                          max={Math.max(5000, savings)}
+                          step="5000"
                           value={investAmount}
                           onChange={(e) => setInvestAmount(Number(e.target.value))}
-                          disabled={savings < 500}
+                          disabled={savings < 5000}
                           className="w-full accent-blue-500 cursor-pointer"
                         />
                         <Button
@@ -898,17 +898,17 @@ Write a short, 2-3 sentence analysis of this choice. Explain its long-term benef
                     <div className="space-y-2 border-t border-border/20 pt-3">
                       <div className="flex justify-between text-xs font-medium">
                         <span>Pay Down Debt</span>
-                        <span className="text-red-400 font-bold">${debtPayoffAmount.toLocaleString()}</span>
+                        <span className="text-red-400 font-bold">₹{debtPayoffAmount.toLocaleString()}</span>
                       </div>
                       <div className="flex gap-2">
                         <input
                           type="range"
-                          min="500"
-                          max={Math.max(500, Math.min(savings, debt))}
-                          step="500"
+                          min="5000"
+                          max={Math.max(5000, Math.min(savings, debt))}
+                          step="5000"
                           value={debtPayoffAmount}
                           onChange={(e) => setDebtPayoffAmount(Number(e.target.value))}
-                          disabled={savings < 500 || debt === 0}
+                          disabled={savings < 5000 || debt === 0}
                           className="w-full accent-red-500 cursor-pointer"
                         />
                         <Button
@@ -938,12 +938,12 @@ Write a short, 2-3 sentence analysis of this choice. Explain its long-term benef
                           Purchase Real Estate
                         </div>
                         <p className="text-[10px] text-muted-foreground leading-normal">
-                          Requires $30,000 down payment. Mortgages $200,000. Adds $220,000 house asset value. Monthly expense increases by $1,200 (mortgage charges).
+                          Requires ₹3,00,000 down payment. Mortgages ₹20,00,000. Adds ₹22,00,000 house asset value. Monthly expense increases by ₹12,000 (mortgage charges).
                         </p>
                       </div>
                       <Button 
                         onClick={handleBuyHouse} 
-                        disabled={savings < 30000 || hasHouse} 
+                        disabled={savings < 300000 || hasHouse} 
                         className="bg-purple-600 hover:bg-purple-700 text-white rounded-lg h-9 px-4 text-xs font-semibold shrink-0"
                       >
                         {hasHouse ? "Owned" : "Buy House"}
@@ -957,12 +957,12 @@ Write a short, 2-3 sentence analysis of this choice. Explain its long-term benef
                           Upskilling & Promotion
                         </div>
                         <p className="text-[10px] text-muted-foreground leading-normal">
-                          Spend $5,000 on a certifications or degree to permanently increase your monthly salary by 20%.
+                          Spend ₹50,000 on certifications or degree to permanently increase your monthly salary by 20%.
                         </p>
                       </div>
                       <Button 
                         onClick={handleUpskill} 
-                        disabled={savings < 5000} 
+                        disabled={savings < 50000} 
                         className="bg-purple-600 hover:bg-purple-700 text-white rounded-lg h-9 px-4 text-xs font-semibold shrink-0"
                       >
                         Upskill
@@ -1030,16 +1030,16 @@ Write a short, 2-3 sentence analysis of this choice. Explain its long-term benef
                   </div>
                   <div className="flex justify-between">
                     <span>Monthly Salary</span>
-                    <span className="font-semibold text-emerald-400">${salary.toLocaleString()}</span>
+                    <span className="font-semibold text-emerald-400">₹{salary.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Monthly Expenses</span>
-                    <span className="font-semibold text-foreground">${expenses.toLocaleString()}</span>
+                    <span className="font-semibold text-foreground">₹{expenses.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between border-t border-border/20 pt-2 font-semibold">
                     <span>Monthly Savings Margin</span>
                     <span className={salary - expenses >= 0 ? "text-emerald-400" : "text-red-400"}>
-                      ${(salary - expenses).toLocaleString()}
+                      ₹{(salary - expenses).toLocaleString()}
                     </span>
                   </div>
                 </div>

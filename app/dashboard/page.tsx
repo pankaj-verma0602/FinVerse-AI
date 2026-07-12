@@ -18,7 +18,11 @@ import {
   ArrowRight,
   Wallet,
   ShieldCheck,
-  Award
+  Award,
+  CheckCircle2,
+  Lock,
+  Clock,
+  Printer
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -29,6 +33,15 @@ export default function DashboardPage() {
   const [scamCount, setScamCount] = useState(0);
   const [lastThreat, setLastThreat] = useState("low");
   const [completedCount, setCompletedCount] = useState(0);
+  
+  // Onboarding & Gamification states
+  const [assessmentCompleted, setAssessmentCompleted] = useState(false);
+  const [assessmentScore, setAssessmentScore] = useState(300);
+  const [assessmentLevel, setAssessmentLevel] = useState("Novice Beginner");
+  const [xp, setXp] = useState(0);
+  const [unlockedBadges, setUnlockedBadges] = useState<string[]>([]);
+  const [showCertificateModal, setShowCertificateModal] = useState(false);
+
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [dailyTip, setDailyTip] = useState<any>(null);
 
@@ -42,13 +55,24 @@ export default function DashboardPage() {
     const updateStats = () => {
       if (typeof window === "undefined") return;
 
-      // 1. Lessons completed
+      // 1. OnboardingCompleted check
+      const isAssCompleted = localStorage.getItem("finverse_assessment_completed") === "true";
+      setAssessmentCompleted(isAssCompleted);
+      
+      const assScore = localStorage.getItem("finverse_assessment_score");
+      if (assScore) setAssessmentScore(Number(assScore));
+      
+      const assLevel = localStorage.getItem("finverse_assessment_level");
+      if (assLevel) setAssessmentLevel(assLevel);
+
+      // 2. Lessons completed
+      let completed = 0;
       const saved = localStorage.getItem("finverse_unlocked_lessons");
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed)) {
-            let completed = parsed.length - 1;
+            completed = parsed.length - 1;
             const isL4Done = localStorage.getItem("finverse_lesson_4_completed") === "true";
             completed = parsed.length - 1 + (isL4Done ? 1 : 0);
             setCompletedCount(Math.max(0, completed));
@@ -60,15 +84,17 @@ export default function DashboardPage() {
         setCompletedCount(0);
       }
 
-      // 2. Net Worth
+      // 3. Net Worth
+      let parsedNet = 24500;
       const storedNet = localStorage.getItem("finverse_sim_net_worth");
       if (storedNet) {
-        setNetWorth(`$${Number(storedNet).toLocaleString()}`);
+        parsedNet = Number(storedNet);
+        setNetWorth(`$${parsedNet.toLocaleString()}`);
       } else {
         setNetWorth("$24,500");
       }
 
-      // 3. Credit Score
+      // 4. Credit Score
       const storedCredit = localStorage.getItem("finverse_sim_credit_score");
       if (storedCredit) {
         setCreditScore(Number(storedCredit));
@@ -76,20 +102,51 @@ export default function DashboardPage() {
         setCreditScore(740);
       }
 
-      // 4. Scams scanned
+      // 5. Scams scanned
+      let parsedScams = 0;
       const storedScams = localStorage.getItem("finverse_scams_analyzed");
       if (storedScams) {
-        setScamCount(Number(storedScams));
+        parsedScams = Number(storedScams);
+        setScamCount(parsedScams);
       } else {
         setScamCount(0);
       }
 
-      // 5. Last threat status
+      // 6. Last threat status
       const storedThreat = localStorage.getItem("finverse_last_scan_threat");
       if (storedThreat) {
         setLastThreat(storedThreat);
       } else {
         setLastThreat("low");
+      }
+
+      // 7. Dynamic XP & Badge computation
+      if (isAssCompleted) {
+        const onboardingXp = 50;
+        const lessonsXp = completed * 50;
+        const scamsXp = parsedScams * 30;
+        const simulatorBonus = parsedNet > 26000 ? 40 : 0;
+        const totalXp = onboardingXp + lessonsXp + scamsXp + simulatorBonus;
+        setXp(totalXp);
+        
+        // Compute active badges list
+        const activeBadges = ["Onboarding Pioneer"];
+        if (completed >= 1) activeBadges.push("Syllabus Scholar");
+        if (parsedNet > 30000) activeBadges.push("Smart Saver");
+        if (parsedScams >= 1) activeBadges.push("Scam Deflector");
+        
+        // If all 4 core simulator/lesson requirements are fulfilled
+        const isL1Done = localStorage.getItem("finverse_lesson_1_completed") === "true";
+        const isSimActive = parsedNet > 26000;
+        const isMentorActive = localStorage.getItem("finverse_mentor_chats_sent") ? Number(localStorage.getItem("finverse_mentor_chats_sent")) >= 1 : false;
+        const isScamActive = parsedScams >= 1;
+        if (isL1Done && isSimActive && isMentorActive && isScamActive) {
+          activeBadges.push("Financial Master");
+        }
+        setUnlockedBadges(activeBadges);
+      } else {
+        setXp(0);
+        setUnlockedBadges([]);
       }
     };
 
@@ -204,6 +261,305 @@ export default function DashboardPage() {
             <span className="text-sm font-medium">Financial Health: Excellent</span>
           </div>
         </div>
+
+        {/* AI Onboarding Assessment & Roadmap Section */}
+        {!assessmentCompleted ? (
+          <Card className="glass-card border border-primary/30 bg-primary/5 p-6 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 border border-primary/20 text-primary uppercase">
+                <Sparkles className="h-3 w-3 animate-pulse" /> Onboarding Pending
+              </div>
+              <h2 className="text-xl font-bold">Unlock Your Personalized AI Learning Roadmap</h2>
+              <p className="text-xs text-muted-foreground leading-relaxed max-w-xl">
+                Take the 2-minute dynamic assessment to establish your starting Financial Literacy Score, earn +50 starting XP, and get a tailored curriculum matching your targets.
+              </p>
+            </div>
+            <Button 
+              onClick={() => router.push("/assessment")}
+              className="h-11 px-6 rounded-xl font-bold bg-primary hover:bg-primary/90 text-white shrink-0 flex items-center gap-1.5"
+            >
+              Start Assessment <ArrowRight className="h-4 w-4" />
+            </Button>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Roadmap Checklists */}
+            <Card className="lg:col-span-2 glass-card border border-border/50 p-6 rounded-2xl space-y-4">
+              <div className="flex items-center justify-between border-b border-border/20 pb-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary animate-pulse" />
+                  <div>
+                    <h3 className="font-bold text-sm">Personalized Learning Roadmap</h3>
+                    <p className="text-[10px] text-muted-foreground">Complete platform goals to unlock the completion certificate</p>
+                  </div>
+                </div>
+                <div className="text-[10px] font-bold px-2 py-0.5 rounded bg-muted border border-border/40 text-muted-foreground">
+                  Score: {assessmentScore} • {assessmentLevel}
+                </div>
+              </div>
+
+              <div className="space-y-4 pt-1">
+                {/* Phase 1 */}
+                <div className="flex items-start justify-between gap-4 p-3 border border-border/30 bg-muted/5 rounded-xl">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5">
+                      {completedCount >= 1 ? (
+                        <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                      ) : (
+                        <Clock className="h-5 w-5 text-muted-foreground/50 animate-pulse" />
+                      )}
+                    </div>
+                    <div className="space-y-0.5">
+                      <div className="text-xs font-bold flex items-center gap-1.5">
+                        <span>Phase 1: Foundation Building</span>
+                        {completedCount >= 1 && <span className="text-[8px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1 py-0.2 rounded font-bold uppercase">Done</span>}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground leading-normal">
+                        Review syllabus Lesson 1 & Lesson 2. Understand compound growth and purchasing decay.
+                      </p>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => router.push("/lessons")}
+                    className="h-7 text-[9px] rounded-lg border-border shrink-0"
+                  >
+                    Go to Lessons
+                  </Button>
+                </div>
+
+                {/* Phase 2 */}
+                <div className="flex items-start justify-between gap-4 p-3 border border-border/30 bg-muted/5 rounded-xl">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5">
+                      {Number(netWorth.replace(/[^0-9.-]+/g,"")) > 26000 ? (
+                        <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                      ) : (
+                        <Lock className="h-5 w-5 text-muted-foreground/45" />
+                      )}
+                    </div>
+                    <div className="space-y-0.5">
+                      <div className="text-xs font-bold flex items-center gap-1.5">
+                        <span>Phase 2: Asset Multipliers</span>
+                        {Number(netWorth.replace(/[^0-9.-]+/g,"")) > 26000 && <span className="text-[8px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1 py-0.2 rounded font-bold uppercase">Done</span>}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground leading-normal">
+                        Achieve a simulated net worth exceeding $26,000 to demonstrate cash reserve discipline.
+                      </p>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => router.push("/simulator")}
+                    className="h-7 text-[9px] rounded-lg border-border shrink-0"
+                  >
+                    Run Simulator
+                  </Button>
+                </div>
+
+                {/* Phase 3 */}
+                <div className="flex items-start justify-between gap-4 p-3 border border-border/30 bg-muted/5 rounded-xl">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5">
+                      {typeof window !== "undefined" && localStorage.getItem("finverse_mentor_chats_sent") && Number(localStorage.getItem("finverse_mentor_chats_sent")) >= 1 ? (
+                        <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                      ) : (
+                        <Lock className="h-5 w-5 text-muted-foreground/45" />
+                      )}
+                    </div>
+                    <div className="space-y-0.5">
+                      <div className="text-xs font-bold flex items-center gap-1.5">
+                        <span>Phase 3: Financial Mentorship</span>
+                        {typeof window !== "undefined" && localStorage.getItem("finverse_mentor_chats_sent") && Number(localStorage.getItem("finverse_mentor_chats_sent")) >= 1 && (
+                          <span className="text-[8px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1 py-0.2 rounded font-bold uppercase">Done</span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground leading-normal">
+                        Consult your Voice Money Mentor to clarify marginal tax brackets.
+                      </p>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => router.push("/mentor")}
+                    className="h-7 text-[9px] rounded-lg border-border shrink-0"
+                  >
+                    Chat with Mentor
+                  </Button>
+                </div>
+
+                {/* Phase 4 */}
+                <div className="flex items-start justify-between gap-4 p-3 border border-border/30 bg-muted/5 rounded-xl">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5">
+                      {scamCount >= 1 ? (
+                        <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                      ) : (
+                        <Lock className="h-5 w-5 text-muted-foreground/45" />
+                      )}
+                    </div>
+                    <div className="space-y-0.5">
+                      <div className="text-xs font-bold flex items-center gap-1.5">
+                        <span>Phase 4: Threat Defense Mastery</span>
+                        {scamCount >= 1 && <span className="text-[8px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1 py-0.2 rounded font-bold uppercase">Done</span>}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground leading-normal">
+                        Scan a text message or web link in the Scam Shield to test phishing detection.
+                      </p>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => router.push("/scam-shield")}
+                    className="h-7 text-[9px] rounded-lg border-border shrink-0"
+                  >
+                    Scan Threats
+                  </Button>
+                </div>
+              </div>
+            </Card>
+
+            {/* Gamification Hub */}
+            <div className="lg:col-span-1 space-y-6">
+              {/* XP Progress Card */}
+              <Card className="glass-card border border-border/50 p-6 rounded-2xl space-y-4">
+                <div>
+                  <div className="flex justify-between items-center text-xs font-bold text-muted-foreground uppercase">
+                    <span>Active Experience</span>
+                    <span className="text-primary font-black">Level {Math.floor(xp / 100) + 1}</span>
+                  </div>
+                  <div className="flex justify-between items-baseline mt-2">
+                    <div className="text-3xl font-black">{xp} <span className="text-xs font-bold text-muted-foreground">XP</span></div>
+                    <span className="text-[10px] text-muted-foreground">{(xp % 100)} / 100 XP to next level</span>
+                  </div>
+                  <Progress value={xp % 100} className="h-2 mt-2" />
+                </div>
+              </Card>
+
+              {/* Unlocked Badges Locker */}
+              <Card className="glass-card border border-border/50 p-6 rounded-2xl space-y-4">
+                <h4 className="font-bold text-xs uppercase text-muted-foreground tracking-wide flex items-center gap-1.5">
+                  <Award className="h-4 w-4 text-amber-500" />
+                  <span>Unlocked Badges Locker</span>
+                </h4>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {unlockedBadges.map((badge) => (
+                    <div 
+                      key={badge} 
+                      className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 select-none animate-in scale-in duration-300"
+                    >
+                      <span>🏆</span>
+                      <span>{badge}</span>
+                    </div>
+                  ))}
+                  {unlockedBadges.length === 0 && (
+                    <span className="text-xs text-muted-foreground">No badges earned yet.</span>
+                  )}
+                </div>
+              </Card>
+
+              {/* Certificate Unlocker */}
+              <Card className="glass-card border border-border/50 p-6 rounded-2xl space-y-4 flex flex-col justify-between">
+                <div>
+                  <h4 className="font-bold text-xs uppercase text-muted-foreground tracking-wide">Program Certification</h4>
+                  <p className="text-[10px] text-muted-foreground leading-normal mt-1">
+                    Complete all 4 roadmap milestones to earn your official Certificate of Financial Capability.
+                  </p>
+                </div>
+                
+                {unlockedBadges.includes("Financial Master") || (completedCount >= 1 && Number(netWorth.replace(/[^0-9.-]+/g,"")) > 26000 && scamCount >= 1) ? (
+                  <Button 
+                    onClick={() => setShowCertificateModal(true)}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl h-10 text-xs font-bold flex items-center justify-center gap-2"
+                  >
+                    <Award className="h-4 w-4" /> View Certificate
+                  </Button>
+                ) : (
+                  <Button 
+                    disabled 
+                    className="w-full bg-muted border border-border text-muted-foreground rounded-xl h-10 text-xs font-semibold flex items-center justify-center gap-2 cursor-not-allowed"
+                  >
+                    <Lock className="h-3.5 w-3.5" /> Milestones Pending
+                  </Button>
+                )}
+              </Card>
+            </div>
+          </div>
+        )}
+
+        {/* Certificate Modal */}
+        {showCertificateModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <Card className="max-w-2xl w-full bg-zinc-950 border border-emerald-500/30 p-8 rounded-2xl relative overflow-hidden space-y-6 animate-in zoom-in-95 duration-200 print:border-0 print:bg-white print:text-black print:absolute print:inset-0 print:p-12">
+              {/* Stamp decoration */}
+              <div className="absolute -top-16 -right-16 h-40 w-40 rounded-full bg-emerald-500/5 blur-3xl print:hidden" />
+              
+              {/* Close button */}
+              <button 
+                onClick={() => setShowCertificateModal(false)}
+                className="absolute top-4 right-4 text-xs text-muted-foreground hover:text-foreground print:hidden bg-zinc-900 border border-border p-1.5 rounded-lg"
+              >
+                ✕
+              </button>
+
+              {/* Content for Certificate */}
+              <div className="border-4 border-double border-emerald-500/20 p-8 rounded-xl text-center space-y-6 bg-zinc-950/50 print:border-black print:bg-white">
+                <div className="space-y-1">
+                  <div className="mx-auto w-12 h-12 bg-emerald-500/10 rounded-full flex items-center justify-center border border-emerald-500/20 print:border-black">
+                    <Award className="h-6 w-6 text-emerald-400 print:text-black" />
+                  </div>
+                  <h4 className="text-[10px] tracking-widest font-black uppercase text-emerald-400 mt-2 print:text-black">FinVerse Academy</h4>
+                </div>
+
+                <div className="space-y-2">
+                  <h2 className="text-3xl font-black font-sans bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent print:from-black print:to-black">
+                    Certificate of Achievement
+                  </h2>
+                  <p className="text-xs text-muted-foreground italic print:text-zinc-600">This certifies that</p>
+                  <div className="text-xl font-bold border-b border-border/40 pb-1 max-w-xs mx-auto text-foreground print:border-black print:text-black">
+                    {user.email}
+                  </div>
+                </div>
+
+                <p className="text-xs text-muted-foreground leading-relaxed max-w-md mx-auto print:text-zinc-700">
+                  has successfully completed all core phases of the AI-powered financial literacy curriculum, demonstrating mastery in compound interest simulations, margin expense allocation, threat detection, and upskilling metrics.
+                </p>
+
+                <div className="grid grid-cols-2 gap-8 pt-4 text-left border-t border-border/10 max-w-sm mx-auto print:border-black">
+                  <div>
+                    <span className="text-[9px] text-muted-foreground uppercase print:text-zinc-500">Date Issued</span>
+                    <div className="text-xs font-bold text-foreground print:text-black">{new Date().toLocaleDateString()}</div>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-muted-foreground uppercase print:text-zinc-500">Certified Score</span>
+                    <div className="text-xs font-bold text-emerald-400 print:text-black">{assessmentScore} FICO-L</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 justify-end print:hidden">
+                <Button 
+                  variant="outline"
+                  onClick={() => window.print()}
+                  className="h-10 rounded-xl px-4 text-xs font-semibold flex items-center gap-1.5 border-border"
+                >
+                  <Printer className="h-4 w-4" /> Print Certificate
+                </Button>
+                <Button 
+                  onClick={() => setShowCertificateModal(false)}
+                  className="h-10 rounded-xl px-4 text-xs font-semibold bg-zinc-900 border border-border hover:bg-zinc-800 text-foreground"
+                >
+                  Dismiss
+                </Button>
+              </div>
+            </Card>
+          </div>
+        )}
 
         {/* Quick Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

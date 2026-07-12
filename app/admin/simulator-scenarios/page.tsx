@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { 
   collection, 
-  addDoc, 
   setDoc, 
   deleteDoc, 
   doc, 
@@ -71,8 +70,11 @@ export default function AdminSimulatorScenariosPage() {
   const [alertMsg, setAlertMsg] = useState<string | null>(null);
 
   useEffect(() => {
+    let active = true;
+
     // Listen to real-time simulator scenarios
     const unsub = onSnapshot(collection(db, "simulator_scenarios"), (snap) => {
+      if (!active) return;
       const docsList: ScenarioDoc[] = [];
       snap.forEach((docSnap) => {
         docsList.push({
@@ -82,14 +84,64 @@ export default function AdminSimulatorScenariosPage() {
       });
       docsList.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
       setScenarios(docsList);
+      localStorage.setItem("finverse_local_simulator_scenarios", JSON.stringify(docsList));
       setLoading(false);
     }, (err) => {
-      console.error(err);
-      setLoading(false);
+      console.warn("Firestore scenarios load failed, using local storage:", err);
+      if (active) loadLocalFallback();
     });
 
-    return () => unsub();
-  }, []);
+    const timeoutId = setTimeout(() => {
+      if (active && scenarios.length === 0) {
+        console.warn("Firestore scenarios load timed out, using local storage.");
+        loadLocalFallback();
+      }
+    }, 1200);
+
+    function loadLocalFallback() {
+      const stored = localStorage.getItem("finverse_local_simulator_scenarios");
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          setScenarios(parsed);
+        } catch (e) {
+          console.error(e);
+        }
+      } else {
+        // Seed default scenario
+        const fallbackList: ScenarioDoc[] = [
+          {
+            id: "crypto_hype",
+            title: "Cryptocurrency Hype",
+            story: "A new viral cryptocurrency meme coin is rising. Friends are urging you to invest ₹25,000 of your emergency savings into it.",
+            difficulty: "Beginner",
+            choices: [
+              {
+                text: "Invest ₹25,000 savings in the coin",
+                effect: { savings: -25000, investments: 0, assets: 0, debt: 0, health: -10 },
+                consequence: "The coin crashes 95% overnight. You lose your cash savings, and the stress impacts your peace of mind."
+              },
+              {
+                text: "Decline and keep emergency reserves liquid",
+                effect: { savings: 0, investments: 0, assets: 0, debt: 0, health: 10 },
+                consequence: "You missed the hype but secure your emergency reserves safely. Your financial foundation remains solid."
+              }
+            ],
+            createdAt: new Date().toISOString()
+          }
+        ];
+        setScenarios(fallbackList);
+        localStorage.setItem("finverse_local_simulator_scenarios", JSON.stringify(fallbackList));
+      }
+      setLoading(false);
+    }
+
+    return () => {
+      active = false;
+      unsub();
+      clearTimeout(timeoutId);
+    };
+  }, [scenarios.length]);
 
   const triggerAlert = (text: string) => {
     setAlertMsg(text);
@@ -177,32 +229,56 @@ export default function AdminSimulatorScenariosPage() {
       updatedAt: new Date().toISOString()
     };
 
-    try {
-      if (activeScenarioId) {
-        await setDoc(doc(db, "simulator_scenarios", activeScenarioId), scenarioData, { merge: true });
-        triggerAlert("Scenario updated successfully!");
-      } else {
-        const newDoc = await addDoc(collection(db, "simulator_scenarios"), {
-          ...scenarioData,
-          createdAt: new Date().toISOString()
-        });
-        setActiveScenarioId(newDoc.id);
-      }
-      setIsEditing(false);
-    } catch (err) {
-      console.error(err);
-      triggerAlert("Error saving simulator scenario.");
+    // Optimistically update local state & local storage
+    const updatedScenarios = [...scenarios];
+    const newId = activeScenarioId || `local_sc_${Date.now()}`;
+    const newDoc: ScenarioDoc = {
+      id: newId,
+      ...scenarioData,
+      createdAt: activeScenarioId ? (scenarios.find(s => s.id === activeScenarioId)?.createdAt || new Date().toISOString()) : new Date().toISOString()
+    };
+
+    const existingIdx = updatedScenarios.findIndex(s => s.id === newId);
+    if (existingIdx >= 0) {
+      updatedScenarios[existingIdx] = newDoc;
+    } else {
+      updatedScenarios.unshift(newDoc);
     }
+    setScenarios(updatedScenarios);
+    localStorage.setItem("finverse_local_simulator_scenarios", JSON.stringify(updatedScenarios));
+
+    try {
+      await setDoc(doc(db, "simulator_scenarios", newId), {
+        ...scenarioData,
+        createdAt: new Date().toISOString()
+      }, { merge: true });
+      triggerAlert("Scenario saved to cloud and local storage successfully!");
+    } catch (err) {
+      console.warn("Firestore save failed, using local storage cache:", err);
+      triggerAlert("Scenario saved locally (Offline Mode).");
+    }
+
+    setIsEditing(false);
   };
 
   const handleDelete = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this scenario? This cannot be undone.")) return;
+
+    // Optimistically update local
+    const filtered = scenarios.filter(s => s.id !== id);
+    setScenarios(filtered);
+    localStorage.setItem("finverse_local_simulator_scenarios", JSON.stringify(filtered));
+
     try {
-      await deleteDoc(doc(db, "simulator_scenarios", id));
+      if (!id.startsWith("local_")) {
+        await deleteDoc(doc(db, "simulator_scenarios", id));
+      }
       triggerAlert("Scenario deleted successfully!");
       handleAddNew();
     } catch (err) {
-      console.error(err);
+      console.warn("Firestore delete failed, removed locally:", err);
+      triggerAlert("Scenario removed locally.");
+      handleAddNew();
     }
   };
 

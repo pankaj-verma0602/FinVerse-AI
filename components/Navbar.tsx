@@ -13,11 +13,23 @@ export default function Navbar() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [assessmentPending, setAssessmentPending] = useState(false);
   const pathname = usePathname();
 
   // Avoid hydration mismatch by waiting for mount
   useEffect(() => {
     setMounted(true);
+    
+    // Check if onboarding assessment is pending
+    const checkAssessment = () => {
+      if (typeof window !== "undefined") {
+        const completed = localStorage.getItem("finverse_assessment_completed") === "true";
+        setAssessmentPending(!completed);
+      }
+    };
+    checkAssessment();
+    const interval = setInterval(checkAssessment, 1000);
+    return () => clearInterval(interval);
   }, []);
 
   const toggleTheme = () => {
@@ -27,9 +39,9 @@ export default function Navbar() {
   const navLinks = user
     ? [
         { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-        { name: "Dictionary", href: "/dictionary", icon: BookOpen },
+        { name: "Knowledge Hub", href: "/financial-dictionary", icon: BookOpen },
         { name: "Settings", href: "/settings", icon: SettingsIcon },
-        { name: "Admin", href: "/admin", icon: ShieldAlert },
+        ...(user.role === "admin" ? [{ name: "Admin", href: "/admin", icon: ShieldAlert }] : []),
       ]
     : [
         { name: "Features", href: "/#features", icon: undefined },
@@ -65,11 +77,17 @@ export default function Navbar() {
                 <Link
                   key={link.name}
                   href={link.href}
-                  className={`text-sm font-medium transition-colors hover:text-primary ${
+                  className={`relative text-sm font-medium transition-colors hover:text-primary ${
                     pathname === link.href ? "text-primary" : "text-muted-foreground"
                   }`}
                 >
-                  {link.name}
+                  <span>{link.name}</span>
+                  {link.name === "Dashboard" && assessmentPending && (
+                    <span className="absolute -top-1 -right-2.5 flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                    </span>
+                  )}
                 </Link>
               ))}
             </div>

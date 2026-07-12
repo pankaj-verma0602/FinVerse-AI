@@ -8,7 +8,6 @@ import {
   FileText,
   ShieldAlert,
   Sparkles,
-  Database,
   BarChart3,
   Bell
 } from "lucide-react";
@@ -23,36 +22,81 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let active = true;
+
     // Read user profiles count
     const fetchUsers = async () => {
       try {
         const snap = await getDocs(collection(db, "users"));
-        setUsersCount(snap.size || 148); // Fallback to simulated count if empty
-      } catch (e) {
-        setUsersCount(148);
+        if (active) setUsersCount(snap.size || 148);
+      } catch {
+        if (active) setUsersCount(148);
       }
     };
     fetchUsers();
 
-    // Listen to real-time updates for modules
+    // Listen to real-time updates for modules with local storage fallback
     const unsubLessons = onSnapshot(collection(db, "lessons"), (snap) => {
-      setLessonsCount(snap.size);
-    }, () => setLessonsCount(8));
+      if (active) setLessonsCount(snap.size);
+    }, () => {
+      if (active) loadLessonsFallback();
+    });
 
     const unsubTerms = onSnapshot(collection(db, "financial_terms"), (snap) => {
-      setTermsCount(snap.size);
-    }, () => setTermsCount(24));
+      if (active) setTermsCount(snap.size);
+    }, () => {
+      if (active) loadTermsFallback();
+    });
 
     const unsubScams = onSnapshot(collection(db, "scam_database"), (snap) => {
-      setScamsCount(snap.size);
-    }, () => setScamsCount(12));
+      if (active) setScamsCount(snap.size);
+    }, () => {
+      if (active) setScamsCount(12);
+    });
+
+    const timeoutId = setTimeout(() => {
+      if (active) {
+        loadLessonsFallback();
+        loadTermsFallback();
+        setScamsCount(12);
+        setLoading(false);
+      }
+    }, 1200);
+
+    function loadLessonsFallback() {
+      const stored = localStorage.getItem("finverse_local_lessons");
+      if (stored) {
+        try {
+          setLessonsCount(JSON.parse(stored).length);
+        } catch {
+          setLessonsCount(2);
+        }
+      } else {
+        setLessonsCount(2);
+      }
+    }
+
+    function loadTermsFallback() {
+      const stored = localStorage.getItem("finverse_local_financial_terms");
+      if (stored) {
+        try {
+          setTermsCount(JSON.parse(stored).length);
+        } catch {
+          setTermsCount(20);
+        }
+      } else {
+        setTermsCount(20);
+      }
+    }
 
     setLoading(false);
 
     return () => {
+      active = false;
       unsubLessons();
       unsubTerms();
       unsubScams();
+      clearTimeout(timeoutId);
     };
   }, []);
 

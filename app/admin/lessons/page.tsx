@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { 
   collection, 
-  addDoc, 
   setDoc, 
   deleteDoc, 
   doc, 
@@ -48,6 +47,43 @@ interface LessonDoc {
 
 const CATEGORIES = ["Budgeting", "Investing", "Debt", "Taxes", "Inflation"];
 
+const SEED_LESSONS: Omit<LessonDoc, "id">[] = [
+  {
+    title: "Lesson 1: Compound Growth Multipliers",
+    description: "Master the dynamics of compounding returns and early investing.",
+    content: "Compound growth refers to the process where an investment's earnings, either capital gains or interest, are reinvested to generate additional earnings over time. This cycle creates a snowball effect, accelerating wealth growth.",
+    category: "Investing",
+    difficulty: "Beginner",
+    language: "English",
+    status: "Published",
+    quizQuestion: "What is compound interest?",
+    quizOptions: [
+      { val: 1, label: "Interest earned on principal and accumulated interest" },
+      { val: 2, label: "A flat annual fee paid to bank managers" },
+      { val: 3, label: "Interest charged on student loans only" }
+    ],
+    quizCorrectVal: 1,
+    createdAt: new Date().toISOString()
+  },
+  {
+    title: "Lesson 2: Inflation & Purchasing Power Decay",
+    description: "Understand how inflation silently erodes your cash savings.",
+    content: "Inflation is the rate at which the general level of prices for goods and services is rising, and subsequently, purchasing power is falling. Central banks attempt to limit inflation, and avoid deflation, to keep the economy running smoothly.",
+    category: "Inflation",
+    difficulty: "Beginner",
+    language: "English",
+    status: "Published",
+    quizQuestion: "How does inflation impact liquid cash?",
+    quizOptions: [
+      { val: 1, label: "It increases its value over time" },
+      { val: 2, label: "It erodes its purchasing power silently" },
+      { val: 3, label: "It has no impact on cash savings" }
+    ],
+    quizCorrectVal: 2,
+    createdAt: new Date().toISOString()
+  }
+];
+
 export default function AdminLessonsPage() {
   const [lessons, setLessons] = useState<LessonDoc[]>([]);
   const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
@@ -75,8 +111,11 @@ export default function AdminLessonsPage() {
   const [alertMsg, setAlertMsg] = useState<string | null>(null);
 
   useEffect(() => {
+    let active = true;
+
     // Listen to real-time lessons feed
     const unsub = onSnapshot(collection(db, "lessons"), (snap) => {
+      if (!active) return;
       const docsList: LessonDoc[] = [];
       snap.forEach((docSnap) => {
         docsList.push({
@@ -84,17 +123,48 @@ export default function AdminLessonsPage() {
           ...docSnap.data()
         } as LessonDoc);
       });
-      // Sort by creation date
       docsList.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
       setLessons(docsList);
+      localStorage.setItem("finverse_local_lessons", JSON.stringify(docsList));
       setLoading(false);
     }, (err) => {
-      console.error(err);
-      setLoading(false);
+      console.warn("Firestore lessons load failed, using local storage:", err);
+      if (active) loadLocalFallback();
     });
 
-    return () => unsub();
-  }, []);
+    const timeoutId = setTimeout(() => {
+      if (active && lessons.length === 0) {
+        console.warn("Firestore lessons load timed out, using local storage.");
+        loadLocalFallback();
+      }
+    }, 1200);
+
+    function loadLocalFallback() {
+      const stored = localStorage.getItem("finverse_local_lessons");
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          setLessons(parsed);
+        } catch (e) {
+          console.error(e);
+        }
+      } else {
+        const withIds = SEED_LESSONS.map((les, idx) => ({
+          id: `local_les_${idx}`,
+          ...les
+        })) as LessonDoc[];
+        setLessons(withIds);
+        localStorage.setItem("finverse_local_lessons", JSON.stringify(withIds));
+      }
+      setLoading(false);
+    }
+
+    return () => {
+      active = false;
+      unsub();
+      clearTimeout(timeoutId);
+    };
+  }, [lessons.length]);
 
   const triggerAlert = (text: string) => {
     setAlertMsg(text);
@@ -173,48 +243,79 @@ export default function AdminLessonsPage() {
       updatedAt: new Date().toISOString()
     };
 
+    // Optimistically update local state & local storage
+    const updatedLessons = [...lessons];
+    const newId = activeLessonId || `local_les_${Date.now()}`;
+    const newDoc: LessonDoc = {
+      id: newId,
+      ...lessonData,
+      createdAt: activeLessonId ? (lessons.find(l => l.id === activeLessonId)?.createdAt || new Date().toISOString()) : new Date().toISOString()
+    };
+
+    const existingIdx = updatedLessons.findIndex(l => l.id === newId);
+    if (existingIdx >= 0) {
+      updatedLessons[existingIdx] = newDoc;
+    } else {
+      updatedLessons.unshift(newDoc);
+    }
+    setLessons(updatedLessons);
+    localStorage.setItem("finverse_local_lessons", JSON.stringify(updatedLessons));
+
     try {
-      if (activeLessonId) {
-        // Edit existing
-        await setDoc(doc(db, "lessons", activeLessonId), {
-          ...lessonData
-        }, { merge: true });
-        triggerAlert("Lesson updated successfully!");
+      if (activeLessonId && !activeLessonId.startsWith("local_")) {
+        await setDoc(doc(db, "lessons", activeLessonId), lessonData, { merge: true });
       } else {
-        // Create new
-        const newDoc = await addDoc(collection(db, "lessons"), {
+        await setDoc(doc(db, "lessons", newId), {
           ...lessonData,
           createdAt: new Date().toISOString()
         });
-        setActiveLessonId(newDoc.id);
       }
-      setIsEditing(false);
+      triggerAlert("Lesson saved to cloud and local storage successfully!");
     } catch (err) {
-      console.error(err);
-      triggerAlert("Error saving lesson documentation.");
+      console.warn("Firestore save failed, using local storage cache:", err);
+      triggerAlert("Lesson saved locally (Offline Mode).");
     }
+
+    setIsEditing(false);
   };
 
   const handleDelete = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this lesson? This cannot be undone.")) return;
+
+    // Optimistically update local
+    const filtered = lessons.filter(l => l.id !== id);
+    setLessons(filtered);
+    localStorage.setItem("finverse_local_lessons", JSON.stringify(filtered));
+
     try {
-      await deleteDoc(doc(db, "lessons", id));
+      if (!id.startsWith("local_")) {
+        await deleteDoc(doc(db, "lessons", id));
+      }
       triggerAlert("Lesson deleted successfully!");
       handleAddNew();
     } catch (err) {
-      console.error(err);
+      console.warn("Firestore delete failed, removed locally:", err);
+      triggerAlert("Lesson removed locally.");
+      handleAddNew();
     }
   };
 
   const handleTogglePublish = async (les: LessonDoc) => {
     const nextStatus = les.status === "Published" ? "Draft" : "Published";
+    
+    // Update local state
+    const updated = lessons.map(l => l.id === les.id ? { ...l, status: nextStatus } as LessonDoc : l);
+    setLessons(updated);
+    localStorage.setItem("finverse_local_lessons", JSON.stringify(updated));
+
     try {
-      await setDoc(doc(db, "lessons", les.id), {
-        status: nextStatus
-      }, { merge: true });
+      if (!les.id.startsWith("local_")) {
+        await setDoc(doc(db, "lessons", les.id), { status: nextStatus }, { merge: true });
+      }
       triggerAlert(`Lesson status changed to ${nextStatus}!`);
     } catch (err) {
-      console.error(err);
+      console.warn("Firestore status toggle failed, updated locally:", err);
+      triggerAlert(`Status toggled locally to ${nextStatus}.`);
     }
   };
 
