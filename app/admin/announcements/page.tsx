@@ -44,6 +44,8 @@ export default function AdminAnnouncementsPage() {
 
   const [alertMsg, setAlertMsg] = useState<string | null>(null);
 
+  const activeAnn = announcements.find((a) => a.id === activeAnnId);
+
   useEffect(() => {
     // Listen to real-time announcements
     const unsub = onSnapshot(collection(db, "announcements"), (snap) => {
@@ -288,7 +290,7 @@ export default function AdminAnnouncementsPage() {
                     {priority} Priority
                   </span>
                   <h2 className="text-2xl font-black mt-2">{title}</h2>
-                  <p className="text-xs text-muted-foreground">Published at {publishedAt}</p>
+                  <p className="text-xs text-muted-foreground">Published at {activeAnn?.publishedAt || activeAnn?.createdAt || "Unknown"}</p>
                 </div>
                 <div className="flex gap-2">
                   <Button onClick={() => setIsEditing(true)} className="bg-primary text-white hover:bg-primary/90 h-9 px-4 rounded-xl flex items-center gap-2 font-bold text-xs">

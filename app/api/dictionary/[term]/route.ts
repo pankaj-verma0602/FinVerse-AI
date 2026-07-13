@@ -4,9 +4,10 @@ import { db } from "@/firebase/config";
 
 export async function GET(
   request: Request,
-  { params }: { params: { term: string } }
+  { params }: { params: Promise<{ term: string }> }
 ) {
-  const termName = decodeURIComponent(params.term).trim();
+  const { term } = await params;
+  const termName = decodeURIComponent(term).trim();
   if (!termName) {
     return NextResponse.json({ error: "Term parameter is required" }, { status: 400 });
   }

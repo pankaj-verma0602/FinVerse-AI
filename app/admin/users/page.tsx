@@ -14,7 +14,6 @@ import { db } from "@/firebase/config";
 import {
   Users,
   Search,
-  Check,
   Shield,
   User
 } from "lucide-react";

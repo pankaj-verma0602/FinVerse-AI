@@ -23,7 +23,9 @@ import {
   VolumeX, 
   MessageSquare,
   Network,
-  Award
+  Award,
+  Share2,
+  Check
 } from "lucide-react";
 
 interface FinancialTerm {
@@ -325,6 +327,33 @@ export default function FinancialDictionaryPage() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [learnedTerms, setLearnedTerms] = useState<string[]>([]);
   const [dbLoading, setDbLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
+
+  // Load term from URL query parameter once terms are populated
+  useEffect(() => {
+    if (typeof window === "undefined" || terms.length === 0) return;
+    const urlParams = new URLSearchParams(window.location.search);
+    const queryTerm = urlParams.get("term");
+    if (queryTerm) {
+      const found = terms.find(t => t.term.toLowerCase() === queryTerm.toLowerCase() || t.id.toLowerCase() === queryTerm.toLowerCase());
+      if (found) {
+        setActiveTerm(found);
+      }
+    }
+  }, [terms]);
+
+  const handleShare = () => {
+    if (typeof window === "undefined" || !activeTerm) return;
+    const shareUrl = `${window.location.origin}${window.location.pathname}?term=${encodeURIComponent(activeTerm.term)}`;
+    navigator.clipboard.writeText(shareUrl)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      })
+      .catch((err) => {
+        console.error("Failed to copy link: ", err);
+      });
+  };
 
   // Sync state
   useEffect(() => {
@@ -498,6 +527,11 @@ export default function FinancialDictionaryPage() {
       window.speechSynthesis.cancel();
       setIsSpeaking(false);
     }
+    // Update URL query param without reload
+    if (typeof window !== "undefined") {
+      const newUrl = `${window.location.pathname}?term=${encodeURIComponent(item.term)}`;
+      window.history.replaceState({ path: newUrl }, "", newUrl);
+    }
   };
 
   return (
@@ -634,6 +668,19 @@ export default function FinancialDictionaryPage() {
                     >
                       {isSpeaking ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4 animate-bounce" />}
                       <span>{isSpeaking ? "Stop" : "Listen"}</span>
+                    </Button>
+
+                    {/* Share Button */}
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleShare}
+                      className={`h-9 px-3 rounded-xl border-border flex items-center gap-1.5 text-xs font-semibold transition-all duration-200 ${
+                        copied ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : ""
+                      }`}
+                    >
+                      {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Share2 className="h-4 w-4 text-primary" />}
+                      <span>{copied ? "Copied!" : "Share"}</span>
                     </Button>
 
                     {/* Language Selector Toggle */}

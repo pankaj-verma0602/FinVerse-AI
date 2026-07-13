@@ -295,36 +295,113 @@ export default function DocumentDecoderPage() {
     }
 
     // Generic custom fallback
+    let docType = "Custom Agreement";
+    let risk = 50;
+    let riskL = "Moderate Risk";
+    let riskC = "orange";
+    
+    if (lowerText.includes("confidential") || lowerText.includes("nda") || lowerText.includes("disclosure")) {
+      docType = "Non-Disclosure Agreement (NDA)";
+      risk = 40;
+      riskL = "Low-Moderate Risk";
+      riskC = "yellow";
+    } else if (lowerText.includes("service") || lowerText.includes("client") || lowerText.includes("vendor")) {
+      docType = "Service Provider Contract";
+      risk = 55;
+      riskL = "Moderate Risk";
+      riskC = "orange";
+    } else if (lowerText.includes("employment") || lowerText.includes("employee") || lowerText.includes("job") || lowerText.includes("salary")) {
+      docType = "Employment Agreement";
+      risk = 45;
+      riskL = "Low-Moderate Risk";
+      riskC = "yellow";
+    } else if (lowerText.includes("loan") || lowerText.includes("mortgage") || lowerText.includes("borrow")) {
+      docType = "Loan & Debt Agreement";
+      risk = 75;
+      riskL = "High Risk";
+      riskC = "red";
+    }
+    
+    const identifiedRestricts: FeeItem[] = [];
+    if (lowerText.includes("terminate") || lowerText.includes("cancel")) {
+      identifiedRestricts.push({
+        name: "Termination Clause",
+        amount: "Notice Required",
+        severity: "medium",
+        description: "Contains custom termination conditions. Ensure notice periods are reciprocal between parties."
+      });
+    }
+    if (lowerText.includes("renew") || lowerText.includes("automatic")) {
+      risk += 10;
+      identifiedRestricts.push({
+        name: "Automatic Renewal",
+        amount: "Recurring Cycle",
+        severity: "high",
+        description: "The contract auto-renews unless written notice is given before the expiration window."
+      });
+    }
+    if (lowerText.includes("liability") || lowerText.includes("indemnity") || lowerText.includes("damage")) {
+      risk += 15;
+      identifiedRestricts.push({
+        name: "Liability Surcharge",
+        amount: "Indemnification",
+        severity: "high",
+        description: "Claims regarding damages, indemnity, or third-party liabilities are outlined. Limit your exposure."
+      });
+    }
+    if (lowerText.includes("interest") || lowerText.includes("penalty") || lowerText.includes("fee")) {
+      risk += 10;
+      identifiedRestricts.push({
+        name: "Financial Penalty",
+        amount: "Variable Fee",
+        severity: "medium",
+        description: "Failure to comply with timelines or payments triggers monetary penalties."
+      });
+    }
+
+    if (identifiedRestricts.length === 0) {
+      identifiedRestricts.push({
+        name: "Standard Terms",
+        amount: "None",
+        severity: "low",
+        description: "No high-risk financial penalties or hidden fees detected in the provided text."
+      });
+    }
+
+    risk = Math.min(99, Math.max(10, risk));
+    if (risk >= 70) {
+      riskL = "High Risk";
+      riskC = "red";
+    } else if (risk >= 40) {
+      riskL = "Moderate Risk";
+      riskC = "orange";
+    } else {
+      riskL = "Low Risk";
+      riskC = "emerald";
+    }
+
+    // Extract potential values
+    const amountMatch = text.match(/(₹|\$|usd|inr)\s?\d+(,\d{3})*(\.\d+)?/gi);
+    const displayedValue = amountMatch ? amountMatch[0] : "Not specified";
+
     return {
-      documentType: "Custom Document Analysis",
-      riskScore: 60,
-      riskLabel: "Moderate Risk",
-      riskColor: "orange",
-      summary: "AI completed scanning your uploaded contract. Found basic terms and warning thresholds for payment cycles and termination penalties.",
-      fees: [
-        {
-          name: "Late Payment Fee",
-          amount: "Variable",
-          severity: "medium",
-          description: "Detected general late penalty clauses if terms are not met on the due date."
-        },
-        {
-          name: "Cancellation / Termination",
-          amount: "Varies",
-          severity: "medium",
-          description: "Contracts typically include fees or notice periods required to terminate services early."
-        }
-      ],
+      documentType: docType,
+      riskScore: risk,
+      riskLabel: riskL,
+      riskColor: riskC,
+      summary: `Completed scanning your ${docType}. Found ${identifiedRestricts.length} specific clause thresholds related to payment cycles, liabilities, or renewal rules.`,
+      fees: identifiedRestricts,
       keyNumbers: [
         { label: "Document Length", value: `${text.length} characters` },
-        { label: "Identified Keywords", value: "Agreement, Fees, Terms" }
+        { label: "Detected Values", value: displayedValue },
+        { label: "Risk Classification", value: riskL }
       ],
-      simplifiedTerms: "• Read all due dates carefully. Missing payments will trigger fees or default status.\n• Verify auto-renewal conditions. Many subscriptions or services keep charging unless explicitly canceled in writing.\n• Only written modifications to this agreement are valid; do not rely on oral promises.",
-      hindiTranslation: "• लेट फीस से बचने के लिए भुगतान की समय सीमा और शर्तों की समीक्षा करें।\n• ऑटो-रिन्यूअल की शर्तों की जांच करें। कई सदस्यताएँ तब तक चार्ज करती रहती हैं जब तक उन्हें लिखित रूप में रद्द न किया जाए।\n• इस समझौते में केवल लिखित बदलाव ही मान्य हैं; मौखिक आश्वासनों पर भरोसा न करें।",
+      simplifiedTerms: `• Estimated document category: ${docType}.\n• Identified clauses for review: ${identifiedRestricts.map(f => f.name).join(", ")}.\n• Keep copies of all signed versions and negotiate any automatic extension terms.`,
+      hindiTranslation: `• दस्तावेज़ श्रेणी: ${docType}।\n• समीक्षा के लिए महत्वपूर्ण क्लॉज: ${identifiedRestricts.map(f => f.name).join(", ")}।\n• हस्ताक्षर करने से पहले हमेशा रिन्यूअल शर्तों को ध्यान से पढ़ें।`,
       recommendations: [
-        "Ask the provider for a clear sheet summarizing all potential fees.",
-        "Check if there are any automatic renewal clauses in the text.",
-        "Consider consulting a professional before signing high-value agreements."
+        `Carefully negotiate any terms related to ${identifiedRestricts[0]?.name || "liabilities"}.`,
+        "Verify if you need to provide written notice to terminate this contract.",
+        "Ensure all oral commitments are written directly into this document."
       ]
     };
   };

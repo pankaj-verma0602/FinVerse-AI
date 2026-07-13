@@ -333,28 +333,36 @@ Write a short, 2-3 sentence analysis of this choice. Explain its long-term benef
   // High-fidelity fallback generator for Offline/Demo Mode
   const getDemoFeedback = (action: string, state: any) => {
     const computedNet = state.savings + state.investments + state.assets - state.debt;
+
+    if (action.startsWith("Resolved Scenario: ")) {
+      const scenarioTitle = action.replace("Resolved Scenario: ", "");
+      return `You resolved the scenario "${scenarioTitle}". Your current net worth is ₹${computedNet.toLocaleString()}. Making proactive decisions in these life challenges helps safeguard your financial future and build good money habits.`;
+    }
+    
+    if (action.startsWith("Random Event: ")) {
+      const eventName = action.replace("Random Event: ", "");
+      return `Life event triggered: "${eventName}". Having liquid cash savings (currently ₹${state.savings.toLocaleString()}) helps you handle these sudden events without resorting to high-interest loans. Keep managing your cash buffer carefully!`;
+    }
+
     if (action.includes("Advance Year")) {
       if (state.salary - state.expenses <= 0) {
         return "Warning: Your annual expenses exceed or match your salary. You are not saving any money. Consider cutting monthly costs or finding ways to boost your salary.";
       }
-      return `Annual cycle complete. Your net worth is now ₹${computedNet.toLocaleString()}. Compounding index funds and regular savings are contributing to your long-term wealth. Keep it up!`;
+      return `Annual cycle complete. Your net worth is now ₹${computedNet.toLocaleString()}. Compounding index funds (₹${state.investments.toLocaleString()}) and regular savings are contributing to your long-term wealth. Keep it up!`;
     }
     if (action.includes("Buy House")) {
-      return `Congratulations on buying a home! While mortgage debt of ₹20,00,000 has been added, you now own a ₹22,00,000 asset. Note that your monthly expenses increased by ₹12,000, which reduces your savings rate. Make sure to rebuild your cash buffer.`;
+      return `Congratulations on buying a home! While mortgage debt has been added, you now own a ₹${state.assets.toLocaleString()} asset. Note that your monthly expenses increased, which reduces your savings rate. Make sure to rebuild your cash buffer.`;
     }
     if (action.includes("Stocks")) {
-      return `You allocated cash to equity index funds. This is a smart choice to build compound returns over inflation, but keep in mind stocks can be volatile. Ensure you still maintain at least 3-6 months of expenses in cash.`;
+      return `You allocated cash to equity index funds. This is a smart choice to build compound returns over inflation, but keep in mind stocks can be volatile. Ensure you still maintain at least 3-6 months of expenses in cash. Current investments: ₹${state.investments.toLocaleString()}.`;
     }
     if (action.includes("Promotion")) {
-      return `Great career move! Investing ₹50,000 in your skills secured a 20% salary increase. This raises your monthly savings capacity from here on out, making other goals like investing or housing much safer.`;
+      return `Great career move! Investing in your skills secured a salary increase to ₹${state.salary.toLocaleString()}/month. This raises your monthly savings capacity from here on out, making other goals like investing or housing much safer.`;
     }
     if (action.includes("Pay Debt")) {
-      return `Paying off high-interest debt is a guaranteed return on investment. By reducing your debt balance, you lower interest accrual and improve your debt-to-income ratio, making your net worth much healthier.`;
+      return `Paying off high-interest debt is a guaranteed return on investment. By reducing your debt balance to ₹${state.debt.toLocaleString()}, you lower interest accrual and improve your debt-to-income ratio, making your net worth much healthier.`;
     }
-    if (action.includes("Random Event")) {
-      return `A random event occurred. Life is full of unpredictable surprises, highlighting why a solid emergency fund (liquid cash savings) is absolutely crucial to shield you from debt traps.`;
-    }
-    return "Your financial parameters look steady. Keep managing your cash reserves and look for opportunities to invest your surplus into compound accounts.";
+    return `Your financial parameters look steady. Cash: ₹${state.savings.toLocaleString()}, Investments: ₹${state.investments.toLocaleString()}, Debt: ₹${state.debt.toLocaleString()}. Keep managing your cash reserves and look for opportunities to invest your surplus into compound accounts.`;
   };
 
   // Game action: Advance 1 Year

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/firebase/auth-context";
 import { useTheme } from "next-themes";
-import { Menu, X, Sun, Moon, Sparkles, LogOut, LayoutDashboard, Settings as SettingsIcon, ShieldAlert, BookOpen } from "lucide-react";
+import { Menu, X, Sun, Moon, Sparkles, LogOut, LayoutDashboard, Settings as SettingsIcon, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function Navbar() {

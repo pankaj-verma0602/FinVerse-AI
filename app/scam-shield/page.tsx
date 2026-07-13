@@ -117,7 +117,8 @@ export default function ScamShieldPage() {
   const getDemoScamResponse = (content: string): ScamAnalysis => {
     const q = content.toLowerCase();
 
-    if (q.includes("electricity") || q.includes("power") || q.includes("bill") || q.includes("disconnection") || q.includes("disconnected")) {
+    // Check specific pre-baked templates first for maximum accuracy
+    if (q.includes("electricity") && (q.includes("disconnection") || q.includes("bill"))) {
       return {
         scamScore: 95,
         warningSigns: ["Fake Urgency", "Direct Contact Request", "Fear Tactics"],
@@ -131,7 +132,7 @@ export default function ScamShieldPage() {
       };
     }
 
-    if (q.includes("lottery") || q.includes("win") || q.includes("promo") || q.includes("prize") || q.includes("winner")) {
+    if (q.includes("lottery") && (q.includes("win") || q.includes("crore") || q.includes("kbc"))) {
       return {
         scamScore: 98,
         warningSigns: ["Unsolicited Cash Offer", "Direct Banking Request", "Too Good To Be True"],
@@ -145,21 +146,44 @@ export default function ScamShieldPage() {
       };
     }
 
-    if (q.includes("fedex") || q.includes("package") || q.includes("delayed") || q.includes("renew") || q.includes("fedx")) {
-      return {
-        scamScore: 92,
-        warningSigns: ["Suspicious URL Domain", "Urgent Delivery Claim", "Credential Harvester"],
-        analysisEn: "This message uses a spoofed package delivery notification with an unofficial shortened link designed to steal your credentials or install malware.",
-        analysisHi: "यह संदेश क्रेडेंशियल चोरी करने या मैलवेयर स्थापित करने के लिए डिज़ाइन किए गए एक अनौपचारिक लिंक के साथ नकली पैकेज डिलीवरी सूचना का उपयोग करता है।",
-        actionPlan: [
-          "Do NOT click the suspect link.",
-          "Check package delivery status only via the official FedEx website/app using your original tracking ID.",
-          "Report the phishing link on Google Safe Browsing."
-        ]
-      };
+    // Parse dynamic components
+    const detectedUrls = content.match(/(https?:\/\/[^\s]+|www\.[^\s]+|[a-zA-Z0-9-]+\.[a-zA-Z]{2,6}\/[^\s]*)/g) || [];
+    const detectedPhone = content.match(/(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g) || [];
+    const detectedAmount = content.match(/(₹|\$|usd|inr)\s?\d+(,\d{3})*(\.\d+)?/gi) || [];
+
+    let entity = "Unverified Entity";
+    if (q.includes("sbi") || q.includes("state bank")) entity = "SBI (State Bank of India)";
+    else if (q.includes("hdfc")) entity = "HDFC Bank";
+    else if (q.includes("icici")) entity = "ICICI Bank";
+    else if (q.includes("amazon")) entity = "Amazon";
+    else if (q.includes("netflix")) entity = "Netflix";
+    else if (q.includes("post")) entity = "Postal Service";
+    else if (q.includes("fedex") || q.includes("dhl") || q.includes("package") || q.includes("delivery")) entity = "Courier Service";
+    else if (q.includes("electricity") || q.includes("power")) entity = "Electricity Board";
+    else if (q.includes("lottery") || q.includes("win") || q.includes("prize")) entity = "Lottery Promoter";
+
+    // Build dynamic warnings
+    const warningSigns = ["Unverified Source"];
+    if (detectedUrls.length > 0) warningSigns.push("Suspicious Link/URL");
+    if (detectedPhone.length > 0) warningSigns.push("Direct Phone Contact Request");
+    if (detectedAmount.length > 0) warningSigns.push("Unsolicited Money Demand/Claim");
+    if (q.includes("urgent") || q.includes("now") || q.includes("immediately") || q.includes("suspended") || q.includes("block")) {
+      warningSigns.push("High Pressure/Fear Tactics");
     }
 
-    if (q.includes("lunch") || q.includes("casual") || q.includes("meeting") || q.includes("hey")) {
+    // Score calculation
+    let score = 30;
+    if (detectedUrls.length > 0) score += 25;
+    if (detectedPhone.length > 0) score += 15;
+    if (detectedAmount.length > 0) score += 15;
+    if (warningSigns.includes("High Pressure/Fear Tactics")) score += 15;
+    if (q.includes("otp") || q.includes("pin") || q.includes("password")) {
+      score += 20;
+      warningSigns.push("Credential Harvesting");
+    }
+
+    // Safety checks for safe chats
+    if (q.includes("lunch") || q.includes("casual") || q.includes("meeting") || q.includes("hey") || (score <= 30 && warningSigns.length === 1)) {
       return {
         scamScore: 5,
         warningSigns: ["No Suspicious Elements"],
@@ -172,15 +196,19 @@ export default function ScamShieldPage() {
       };
     }
 
+    score = Math.min(99, Math.max(15, score));
+    const urlText = detectedUrls.length > 0 ? `the link "${detectedUrls[0]}"` : "unverified links";
+    const amountText = detectedAmount.length > 0 ? `amount of ${detectedAmount[0]}` : "unsolicited transactions";
+
     return {
-      scamScore: 82,
-      warningSigns: ["Unverified Source", "Suspicious Pattern"],
-      analysisEn: "This input contains warning flags resembling common social engineering tactics, such as asking for direct actions, external links, or sensitive data.",
-      analysisHi: "इस इनपुट में सामान्य सोशल इंजीनियरिंग रणनीति से मिलते-जुलते चेतावनी संकेत हैं, जैसे कि प्रत्यक्ष कार्रवाई, बाहरी लिंक, या संवेदनशील डेटा मांगना।",
+      scamScore: score,
+      warningSigns: warningSigns,
+      analysisEn: `This message claiming to be from ${entity} exhibits suspicious indicators. It requests you to interact with ${urlText} regarding ${amountText}, which is a typical phishing behavior. Real organizations do not demand actions through unofficial channels.`,
+      analysisHi: `यह संदेश जो ${entity} से होने का दावा करता है, संदिग्ध संकेत दिखाता है। यह आपको ${amountText} के संबंध में ${urlText} पर क्लिक करने के लिए कहता है, जो एक विशिष्ट फ़िशिंग व्यवहार है। वास्तविक संगठन अनौपचारिक चैनलों के माध्यम से ऐसी मांग नहीं करते हैं।`,
       actionPlan: [
-        "Avoid clicking any links contained in this message.",
-        "Verify the source through official, independent offline channels.",
-        "Never share credentials or OTPs with unknown contacts."
+        `Do NOT click on ${detectedUrls[0] || "any links"} or dial any numbers provided in the message.`,
+        `Verify this communication directly with ${entity} through their official, verified website or phone support.`,
+        "Never share your OTP, Bank PIN, or Password with anyone."
       ]
     };
   };

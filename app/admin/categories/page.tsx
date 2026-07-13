@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { 
   collection, 
   addDoc, 
-  setDoc, 
   deleteDoc, 
   doc, 
   onSnapshot 
@@ -16,7 +15,6 @@ import {
 import { db } from "@/firebase/config";
 import {
   Tag,
-  Plus,
   Trash2,
   Sparkles
 } from "lucide-react";

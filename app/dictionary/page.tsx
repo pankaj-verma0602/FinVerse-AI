@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/button";
 import { 
   Search, 
   ArrowLeft, 
-  BookOpen
+  BookOpen,
+  Share2,
+  Check
 } from "lucide-react";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "@/firebase/config";
@@ -31,6 +33,40 @@ export default function DictionaryPage() {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const [loading, setLoading] = useState(true);
+  const [copiedTermId, setCopiedTermId] = useState<string | null>(null);
+
+  // Load search from URL query parameter once on mount
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const urlParams = new URLSearchParams(window.location.search);
+    const searchParam = urlParams.get("search");
+    if (searchParam) {
+      setSearch(searchParam);
+    }
+  }, []);
+
+  // Sync search state back to URL
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const newUrl = search 
+      ? `${window.location.pathname}?search=${encodeURIComponent(search)}`
+      : window.location.pathname;
+    window.history.replaceState({ path: newUrl }, "", newUrl);
+  }, [search]);
+
+  const handleShare = (t: DictionaryTerm) => {
+    if (typeof window === "undefined") return;
+    const termName = t.title || t.term || "";
+    const shareUrl = `${window.location.origin}${window.location.pathname}?search=${encodeURIComponent(termName)}`;
+    navigator.clipboard.writeText(shareUrl)
+      .then(() => {
+        setCopiedTermId(t.id);
+        setTimeout(() => setCopiedTermId(null), 2000);
+      })
+      .catch((err) => {
+        console.error("Failed to copy link: ", err);
+      });
+  };
 
   useEffect(() => {
     // Subscribe to Firestore financial_terms in real time
@@ -128,9 +164,23 @@ export default function DictionaryPage() {
               <Card key={t.id} className="glass-card border border-border/50 p-6 rounded-2xl space-y-4 hover:border-primary/20 transition-all duration-300">
                 <div className="flex justify-between items-start">
                   <h3 className="font-extrabold text-lg text-primary">{t.title || t.term}</h3>
-                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-muted border border-border/40 text-muted-foreground">
-                    {t.category}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-muted border border-border/40 text-muted-foreground">
+                      {t.category}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 rounded-lg hover:bg-muted"
+                      onClick={() => handleShare(t)}
+                    >
+                      {copiedTermId === t.id ? (
+                        <Check className="h-3.5 w-3.5 text-emerald-400" />
+                      ) : (
+                        <Share2 className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="space-y-3 text-xs leading-relaxed">

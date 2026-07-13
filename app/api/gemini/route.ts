@@ -1,55 +1,85 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-export async function POST(req: NextRequest) {
+export async function GET(
+  request: Request
+) {
+  const { searchParams } = new URL(request.url);
+  const term = searchParams.get("term") || "";
+
   try {
-    const { prompt } = await req.json();
+    // your dictionary logic here
+    return NextResponse.json({
+      term,
+      category: "Finance",
+      difficulty: "Beginner",
+      definition: "Example definition",
+      example: "Example usage",
+      importance: "Important",
+      mistakes: [],
+      relatedTerms: []
+    });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || "Something went wrong" }, { status: 500 });
+  }
+}
 
-    if (!prompt) {
-      return NextResponse.json(
-        { error: "Prompt is required" },
-        { status: 400 }
-      );
-    }
+export async function POST(request: Request) {
+  try {
+    // Parse Headers
+    const simLatency = request.headers.get("x-sim-latency");
+    const simError = request.headers.get("x-sim-error");
+    const customKey = request.headers.get("x-gemini-key");
 
-    // Simulated Latency from Admin settings
-    const simLatency = req.headers.get("x-sim-latency");
+    // 1. Simulate Latency
     if (simLatency) {
-      const ms = Number(simLatency);
+      const ms = parseInt(simLatency, 10);
       if (!isNaN(ms) && ms > 0) {
         await new Promise((resolve) => setTimeout(resolve, ms));
       }
     }
 
-    // Forced Error Simulation from Admin settings
-    const simError = req.headers.get("x-sim-error");
-    if (simError === "true") {
-      throw new Error("[Simulated API Error] Forced API failure enabled in Admin Panel diagnostics.");
+    // 2. Simulate Error
+    if (simError === "500" || simError === "true") {
+      return NextResponse.json({ error: "Simulated Internal Server Error" }, { status: 500 });
     }
 
-    const customApiKey = req.headers.get("x-gemini-key");
-    const apiKey = (customApiKey && customApiKey !== "undefined" && customApiKey !== "") ? customApiKey : process.env.GEMINI_API_KEY;
+    // Parse Body
+    const { prompt } = await request.json();
+    if (!prompt) {
+      return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
+    }
 
-    if (!apiKey || apiKey === "dummy-gemini-key") {
-      // If key is not configured, provide a mock response for easy local testing
+    // 3. Determine API Key
+    const apiKey = customKey?.trim() || process.env.GEMINI_API_KEY?.trim() || "";
+
+    // 4. Fallback if no API key is configured or matches common placeholders
+    const isPlaceholder = !apiKey || 
+                          apiKey === "dummy-api-key" || 
+                          apiKey.includes("your-api-key") || 
+                          apiKey.startsWith("AQ."); // Default placeholder prefix in .env.local
+
+    if (isPlaceholder) {
       return NextResponse.json({
-        text: `[Demo Mode] Gemini API Key is not configured. You asked: "${prompt}". Set your GEMINI_API_KEY in .env.local to enable live AI responses.`,
+        text: "[Demo Mode] No API key configured. Falling back to offline simulator response."
       });
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    // Use gemini-3.5-flash as default stable text model
-    const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash" });
-
-    const result = await model.generateContent(prompt);
-    const responseText = result.response.text();
-
-    return NextResponse.json({ text: responseText });
+    // 5. Generate content using Gemini SDK
+    try {
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const result = await model.generateContent(prompt);
+      const text = result.response.text();
+      return NextResponse.json({ text });
+    } catch (sdkError: any) {
+      console.warn("Gemini SDK call failed, falling back to [Demo Mode]:", sdkError);
+      return NextResponse.json({
+        text: `[Demo Mode] Gemini API call failed. Falling back to offline simulation. Error: ${sdkError.message || sdkError}`
+      });
+    }
   } catch (error: any) {
-    console.error("Gemini API Route Error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to contact Gemini API" },
-      { status: 500 }
-    );
+    console.error("Error in /api/gemini POST route:", error);
+    return NextResponse.json({ error: error.message || "Something went wrong" }, { status: 500 });
   }
 }
