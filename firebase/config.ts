@@ -12,10 +12,28 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase only once
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-const auth = getAuth(app);
-const db = getFirestore(app);
-const storage = getStorage(app);
+let app: any;
+let auth: any;
+let db: any;
+let storage: any;
+
+try {
+  const hasValidConfig = 
+    firebaseConfig.apiKey && 
+    firebaseConfig.apiKey !== "your_api_key_here" && 
+    firebaseConfig.apiKey !== "dummy-api-key" &&
+    !firebaseConfig.apiKey.startsWith("your_");
+
+  if (hasValidConfig) {
+    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+    auth = getAuth(app);
+    db = getFirestore(app);
+    storage = getStorage(app);
+  } else {
+    console.warn("Firebase config is empty or invalid. Initializing in mock/offline mode.");
+  }
+} catch (error) {
+  console.error("Firebase initialization failed:", error);
+}
 
 export { app, auth, db, storage };

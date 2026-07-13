@@ -35,7 +35,10 @@ const AuthContext = createContext<AuthContextType>({
 
 const isDemoMode = () => {
   const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
-  return !apiKey || apiKey === "dummy-api-key";
+  return !apiKey || 
+         apiKey === "dummy-api-key" || 
+         apiKey === "your_api_key_here" || 
+         apiKey.startsWith("your_");
 };
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
