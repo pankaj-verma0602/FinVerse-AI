@@ -1,14 +1,14 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { 
-  onAuthStateChanged, 
+import {
+  onAuthStateChanged,
   signOut as firebaseSignOut,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword
 } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { auth, db } from "./config";
+import { auth, db, isFirebaseConfigured } from "./config";
 
 interface AuthUser {
   email: string | null;
@@ -33,13 +33,7 @@ const AuthContext = createContext<AuthContextType>({
   logout: async () => {},
 });
 
-const isDemoMode = () => {
-  const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
-  return !apiKey || 
-         apiKey === "dummy-api-key" || 
-         apiKey === "your_api_key_here" || 
-         apiKey.startsWith("your_");
-};
+const isDemoMode = () => !isFirebaseConfigured();
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);

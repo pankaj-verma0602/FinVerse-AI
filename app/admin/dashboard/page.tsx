@@ -89,8 +89,6 @@ export default function AdminDashboardPage() {
       }
     }
 
-    setLoading(false);
-
     return () => {
       active = false;
       unsubLessons();
